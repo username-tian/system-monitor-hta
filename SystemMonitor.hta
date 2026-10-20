@@ -18,6 +18,45 @@
   --pu:#7c4dff; --tx:#cfe6f5; --mu:#5c7a94;
   --ok:#00e676; --warn:#ffb300; --bad:#ff3860; --or:#ff7043;
 }
+/* 浅色主题 */
+body.light{
+  --bg:#f0f4f8; --bg2:#e6ecf2;
+  --panel:#ffffff; --panel2:#f7fafd;
+  --line:#cdd9e6;
+  --cy:#0288d1; --cy-dim:rgba(2,136,209,.3);
+  --pu:#5e35b1; --tx:#1a2a3a; --mu:#5a7184;
+  --ok:#2e7d32; --warn:#ef6c00; --bad:#c62828; --or:#d84315;
+}
+body.light .hud{background:linear-gradient(180deg,#e3edf6,#d4e0ed);border-bottom-color:#b8c9da}
+body.light .hud::after{background:linear-gradient(90deg,transparent,var(--cy),transparent)}
+body.light .logo{color:var(--cy)}
+body.light .hud .l{color:var(--mu)}
+body.light .panel{background:linear-gradient(180deg,var(--panel),var(--bg2));border-color:var(--line)}
+body.light .panel::before,.panel::after{border-color:var(--cy-dim)}
+body.light .twrap{background:rgba(255,255,255,.8)}
+body.light thead th{background:#e8eef5;border-bottom-color:#c0d0e0;color:var(--mu)}
+body.light td{border-bottom-color:#e2eaf2}
+body.light tbody tr:hover{background:rgba(2,136,209,.06)}
+body.light tbody tr.sel{background:rgba(2,136,209,.1)}
+body.light .search{background:#fff;color:var(--tx);border-color:#b8c9da}
+body.light .chip{border-color:#b8c9da;color:var(--mu)}
+body.light .chip:hover{color:var(--tx);border-color:#8aa6c0}
+body.light .chip.on{color:var(--cy);border-color:var(--cy);background:rgba(2,136,209,.08)}
+body.light .ctx{background:linear-gradient(180deg,#ffffff,#f0f5fa);border-color:#b8c9da}
+body.light .ctx-hd{border-bottom-color:#cdd9e6;color:var(--cy)}
+body.light .ctx-it{color:var(--tx)}
+body.light .ctx-it.dis{color:#a0b0c0}
+body.light .ctx-it:hover{background:rgba(2,136,209,.08)}
+body.light .detail{background:linear-gradient(180deg,#ffffff,#f0f5fa);border-color:#b8c9da}
+body.light .mbox{background:linear-gradient(180deg,#ffffff,#f0f5fa);border-color:#b8c9da}
+body.light .log{color:var(--tx)}
+body.light .gauge-svg{filter:none}
+body.light .gbg{stroke:#d0dae6}
+body.light .legend{color:var(--mu)}
+body.light .name-prot{color:var(--mu)}
+body.light .btn{background:rgba(2,136,209,.06);border-color:#b8c9da;color:var(--tx)}
+body.light .btn:hover{border-color:var(--cy);color:var(--cy)}
+body.light body{background-image:linear-gradient(rgba(2,136,209,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(2,136,209,.03) 1px,transparent 1px)}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 body{
@@ -115,7 +154,8 @@ body{
   height:26px;padding:0 12px;font-size:11px;color:var(--mu);cursor:pointer;letter-spacing:.5px;
   background:transparent;border:1px solid #1b3a5c;border-radius:3px;transition:all .15s;
 }
-.chip:hover{color:var(--tx);border-color:#2a5780}
+.chip:hover{color:var(--tx);border-color:#2a5780;transform:translateY(-1px)}
+.chip:active{transform:translateY(0) scale(.96)}
 .chip.on{color:var(--cy);border-color:var(--cy);background:rgba(0,229,255,.08);box-shadow:0 0 10px rgba(0,229,255,.15)}
 .count{margin-left:auto;color:var(--mu);font-size:10px;letter-spacing:1px}
 
@@ -131,9 +171,10 @@ thead th{
 thead th:hover{color:var(--cy)}
 thead th .arr{color:var(--cy);margin-left:3px}
 td{padding:5px 10px;border-bottom:1px solid #0d1c2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
-tbody tr{cursor:pointer;transition:background .12s}
-tbody tr:hover{background:rgba(0,229,255,.05)}
-tbody tr.sel{background:rgba(0,229,255,.09);box-shadow:inset 2px 0 0 var(--cy)}
+tbody tr{cursor:pointer;transition:background .15s,box-shadow .15s,transform .08s}
+tbody tr:hover{background:rgba(0,229,255,.06)}
+tbody tr:active{transform:scale(.998)}
+tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .num{text-align:right}
 .name-trae{color:var(--cy);font-weight:600}
 .name-prot{color:var(--mu)}
@@ -225,11 +266,36 @@ tbody tr.sel{background:rgba(0,229,255,.09);box-shadow:inset 2px 0 0 var(--cy)}
   background:rgba(0,229,255,.06);border:1px solid #1f4a6e;color:var(--tx);margin-left:4px;transition:all .12s;
 }
 .btn:hover{border-color:var(--cy);color:var(--cy);box-shadow:0 0 8px rgba(0,229,255,.2)}
-.btn:active{transform:translateY(1px)}
+.btn:active{transform:translateY(1px) scale(.97)}
 .btn.danger{color:var(--bad);border-color:rgba(255,56,96,.4);background:rgba(255,56,96,.06)}
 .btn.danger:hover{box-shadow:0 0 8px rgba(255,56,96,.3)}
 .btn.accent{color:var(--cy);border-color:var(--cy)}
 .btn[disabled]{opacity:.4;cursor:default;box-shadow:none}
+
+/* ---------- Toast 通知 ---------- */
+.toast-wrap{position:fixed;top:70px;right:16px;z-index:400;display:flex;flex-direction:column;gap:8px}
+.toast{
+  min-width:260px;max-width:360px;padding:10px 14px;border-radius:4px;font-size:11px;line-height:1.55;
+  background:linear-gradient(180deg,#0d1a2c,#081120);border:1px solid #1f4a6e;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:toastin .2s;display:flex;align-items:flex-start;gap:10px;
+}
+body.light .toast{background:linear-gradient(180deg,#ffffff,#f0f5fa);border-color:#b8c9da;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.toast.out{animation:toastout .25s forwards}
+@keyframes toastin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+@keyframes toastout{to{opacity:0;transform:translateX(20px)}}
+.toast .tic{width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#04080d}
+.toast.ok .tic{background:var(--ok)} .toast.err .tic{background:var(--bad);color:#fff} .toast.info .tic{background:var(--cy)}
+.toast .tmsg{flex:1}
+.toast .ttitle{font-weight:700;margin-bottom:2px}
+.toast .tsub{color:var(--mu);font-size:10px}
+
+/* 主题切换按钮 */
+.themeswitch{
+  width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,229,255,.06);border:1px solid #1b3a5c;color:var(--cy);font-size:14px;transition:all .15s;flex-shrink:0;
+}
+body.light .themeswitch{background:rgba(2,136,209,.08);border-color:#b8c9da}
+.themeswitch:hover{border-color:var(--cy);box-shadow:0 0 10px rgba(0,229,255,.3)}
 </style>
 </head>
 <body>
@@ -240,6 +306,7 @@ tbody tr.sel{background:rgba(0,229,255,.09);box-shadow:inset 2px 0 0 var(--cy)}
     SYS://MONITOR <span class="ver">v3.0</span>
   </div>
   <span class="lamp" id="liveDot"></span>
+  <span class="themeswitch" id="themeBtn" onclick="toggleTheme()" title="切换明/暗主题">◐</span>
   <div class="hud-stats">
     <div class="hs"><span class="l">CPU LOAD</span><span class="v mono" id="hCpu">--</span></div>
     <div class="hs"><span class="l">MEMORY</span><span class="v mono" id="hMem">--</span></div>
@@ -366,6 +433,8 @@ tbody tr.sel{background:rgba(0,229,255,.09);box-shadow:inset 2px 0 0 var(--cy)}
     </div>
   </div>
 </div>
+
+<div class="toast-wrap" id="toastWrap"></div>
 
 <script>
 /* ================= 基础 ================= */
@@ -557,6 +626,45 @@ function log(msg, kind){
   while (l.children.length > 40) l.removeChild(l.lastChild);
 }
 
+function toast(title, sub, kind){
+  kind = kind || 'info';
+  var wrap = $('toastWrap');
+  var t = document.createElement('div');
+  t.className = 'toast ' + kind;
+  var ic = kind === 'ok' ? '✓' : (kind === 'err' ? '✕' : 'i');
+  t.innerHTML = '<div class="tic">' + ic + '</div><div class="tmsg"><div class="ttitle">' + esc(title) + '</div><div class="tsub">' + esc(sub||'') + '</div></div>';
+  wrap.appendChild(t);
+  setTimeout(function(){ t.className = 'toast ' + kind + ' out'; setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 260); }, 3500);
+}
+
+/* HTA 中 localStorage 不可用，用 cookie + 内存变量兜底 */
+var _memStore = {};
+function storeGet(k){
+  try { if (window.localStorage) return localStorage.getItem(k); } catch(e){}
+  try {
+    var m = document.cookie.match(new RegExp('(^|; )' + k + '=([^;]*)'));
+    if (m) return decodeURIComponent(m[2]);
+  } catch(e){}
+  return _memStore[k] || null;
+}
+function storeSet(k, v){
+  _memStore[k] = v;
+  try { if (window.localStorage) localStorage.setItem(k, v); return; } catch(e){}
+  try { document.cookie = k + '=' + encodeURIComponent(v) + ';expires=Fri, 31 Dec 9999 23:59:59 GMT;path=/'; } catch(e){}
+}
+
+var _theme = storeGet('sm_theme') || 'light';
+function applyTheme(){
+  if (_theme === 'light'){ document.body.className = 'light'; $('themeBtn').textContent = '◑'; }
+  else { document.body.className = ''; $('themeBtn').textContent = '◐'; }
+}
+function toggleTheme(){
+  _theme = _theme === 'light' ? 'dark' : 'light';
+  storeSet('sm_theme', _theme);
+  applyTheme();
+  toast('主题已切换', _theme === 'light' ? '浅色模式' : '深色模式', 'info');
+}
+
 function q(wql){
   var out = [];
   var items = new Enumerator(wmi.ExecQuery(wql, 'WQL', 48));
@@ -582,7 +690,7 @@ function getData(){
   var cpuTotal = 0;
   try {
     var c = q("SELECT PercentProcessorTime FROM Win32_PerfFormattedData_PerfOS_Processor WHERE Name='_Total'")[0];
-    cpuTotal = c ? c.PercentProcessorTime : 0;
+    cpuTotal = c ? Number(c.PercentProcessorTime) || 0 : 0;
   } catch(e){}
 
   var memPct = 0;
@@ -893,9 +1001,17 @@ function setPrio(p, level, label){
   try {
     var wp = wmi.Get("Win32_Process.Handle='" + p.pid + "'");
     var rc = wp.SetPriority(level);
-    if (rc === 0) log(p.name + ' (PID ' + p.pid + ') 优先级已设为「' + label + '」', 'ok');
-    else log('设置失败 PID ' + p.pid + '，返回码 ' + rc, 'err');
-  } catch(e){ log('设置失败: ' + e.message, 'err'); }
+    if (rc === 0){
+      toast('优先级已调整', p.name + ' → ' + label, 'ok');
+      log(p.name + ' (PID ' + p.pid + ') 优先级已设为「' + label + '」', 'ok');
+    } else {
+      toast('设置失败', '返回码 ' + rc + '（可能需要管理员权限）', 'err');
+      log('设置失败 PID ' + p.pid + '，返回码 ' + rc, 'err');
+    }
+  } catch(e){
+    toast('设置失败', e.message, 'err');
+    log('设置失败: ' + e.message, 'err');
+  }
 }
 
 function locateFile(p){
@@ -928,16 +1044,63 @@ function askKill(pid){
   $('modal').className = 'modal show';
 }
 function closeModal(){ $('modal').className = 'modal'; pending = null; }
+function isProcAlive(pid){
+  try {
+    var chk = wmi.Get("Win32_Process.Handle='" + pid + "'");
+    return (chk && chk.ProcessId === pid);
+  } catch(e){ return false; }
+}
+
 $('mok').onclick = function(){
   if (!pending) return;
   var pid = pending.pid, name = pending.name;
   closeModal();
+  toast('正在结束进程...', name + ' (PID ' + pid + ')', 'info');
+
+  // 方法1: WMI Terminate
+  var killed = false;
   try {
     var wp = wmi.Get("Win32_Process.Handle='" + pid + "'");
-    var rc = wp.Terminate(0);
-    if (rc === 0) log('已结束进程 ' + name + ' (PID ' + pid + ')', 'ok');
-    else log('结束失败 PID ' + pid + '，系统返回码 ' + rc + '（可能需要管理员权限）', 'err');
-  } catch(e){ log('结束失败 PID ' + pid + ': ' + e.message, 'err'); }
+    if (wp.Terminate(0) === 0) killed = true;
+  } catch(e){}
+
+  // 方法2: taskkill /F（WMI 失败时用，更可靠）
+  if (!killed){
+    try {
+      var rc = sh.Run('taskkill /F /PID ' + pid + ' /T', 0, true);
+      if (rc === 0) killed = true;
+    } catch(e){}
+  }
+
+  if (!killed){
+    // 方法3: 提权运行 taskkill（弹出 UAC，用户点"是"即可）
+    try {
+      var sa = new ActiveXObject("Shell.Application");
+      sa.ShellExecute("taskkill.exe", "/F /PID " + pid + " /T", "", "runas", 0);
+      toast('已请求管理员权限', '请在 UAC 弹窗中点"是"以结束 ' + name, 'info');
+      log('已发起提权结束请求 PID ' + pid, 'info');
+    } catch(e){
+      toast('结束失败', '权限不足，请以管理员身份运行本程序', 'err');
+      log('结束失败 PID ' + pid + ': ' + e.message, 'err');
+      return;
+    }
+  }
+
+  // 二次验证：等待 500ms 后确认进程是否真的死了
+  setTimeout(function(){
+    if (!isProcAlive(pid)){
+      toast('进程已成功结束', name + ' (PID ' + pid + ')', 'ok');
+      log('已结束进程 ' + name + ' (PID ' + pid + ')', 'ok');
+      if (lastData){
+        lastData.processes = lastData.processes.filter(function(p){ return p.pid !== pid; });
+        lastData.procCount = lastData.processes.length;
+        renderTable(lastData.processes);
+      }
+    } else {
+      toast('进程仍存活', name + ' 需要管理员权限，已请求 UAC 提权', 'err');
+      log('结束 PID ' + pid + ' 后验证进程仍存活', 'err');
+    }
+  }, killed ? 400 : 1200);
 };
 
 function optimize(){
@@ -955,7 +1118,9 @@ function optimize(){
         } catch(e){ fail++; }
       }
     }
-    log('一键优化完成: ' + count + ' 个进程已降为「低于正常」' + (fail ? '，' + fail + ' 个失败' : '') + ' — 只调优先级，未结束任何进程', count ? 'ok' : 'err');
+    var msg = '一键优化完成: ' + count + ' 个进程已降为「低于正常」' + (fail ? '，' + fail + ' 个失败' : '') + ' — 只调优先级，未结束任何进程';
+    log(msg, count ? 'ok' : 'err');
+    toast(count ? '一键优化完成' : '无可优化进程', count + ' 个进程降优先级' + (fail ? '，' + fail + ' 个失败' : ''), count ? 'ok' : 'info');
   } finally {
     btn.disabled = false;
   }
@@ -964,6 +1129,7 @@ function optimize(){
 window.onresize = drawChart;
 
 /* ================= 启动 ================= */
+applyTheme();
 log('SYS://MONITOR 初始化...', 'info');
 setTimeout(function(){
   try {
