@@ -217,6 +217,7 @@ tbody tr.sel{background:rgba(0,229,255,.09);box-shadow:inset 2px 0 0 var(--cy)}
 .mrisk{font-size:11px;padding:8px 10px;border-radius:3px;margin-bottom:14px;line-height:1.65}
 .mrisk.med{background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.4);color:var(--warn)}
 .mrisk.high{background:rgba(255,112,67,.1);border:1px solid rgba(255,112,67,.4);color:var(--or)}
+.mrisk.low{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.35);color:var(--ok)}
 .mbtns{display:flex;justify-content:flex-end;gap:8px}
 
 .btn{
@@ -387,7 +388,7 @@ var CCLR = {ok:'#00e676', warn:'#ffb300', bad:'#ff3860'};
 
 window.onerror = function(msg, url, line){
   log('脚本错误 (行 ' + line + '): ' + msg, 'err');
-  return false;
+  return true;
 };
 
 /* ================= 知识库：程序说明 + 原因 + 建议 + 风险 ================= */
@@ -738,6 +739,10 @@ function renderTable(procs){
       '<td class="num">' + act + '</td></tr>';
     prevCpu[p.pid] = p.cpu;
   }
+  // 清理已退出进程的 prevCpu 记录，防止内存泄漏
+  var curPids = {};
+  for (var i = 0; i < rows.length; i++) curPids[rows[i].pid] = true;
+  for (var k in prevCpu){ if (!curPids[k]) delete prevCpu[k]; }
   $('tbody').innerHTML = html;
   window._rows = rows;
   updateSortArrows();
@@ -792,7 +797,8 @@ function render(d){
 
 var bootMs = new Date().getTime();
 function fmtUptime(){
-  var ms = new Date().getTime() - bootMs + (window._bootOffset || 0);
+  var ms = new Date().getTime() - bootMs - (window._bootOffset || 0);
+  if (ms < 0) ms = 0;
   var h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
   return h + 'h ' + m + 'm';
 }
@@ -851,8 +857,10 @@ function ctxShow(e, pid){
   var m = $('ctx');
   m.className = 'ctx show';
   var x = e.clientX, y = e.clientY;
-  if (x + m.offsetWidth > document.body.clientWidth) x = document.body.clientWidth - m.offsetWidth - 4;
-  if (y + m.offsetHeight > document.body.clientHeight) y = document.body.clientHeight - m.offsetHeight - 4;
+  var vw = document.documentElement.clientWidth || document.body.clientWidth;
+  var vh = document.documentElement.clientHeight || document.body.clientHeight;
+  if (x + m.offsetWidth > vw) x = vw - m.offsetWidth - 4;
+  if (y + m.offsetHeight > vh) y = vh - m.offsetHeight - 4;
   m.style.left = x + 'px';
   m.style.top = y + 'px';
   e.cancelBubble = true;
