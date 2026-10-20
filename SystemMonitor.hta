@@ -1,0 +1,977 @@
+﻿﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=11">
+<title>SYS://MONITOR</title>
+<hta:application id="oHTA"
+  applicationname="System Monitor"
+  border="thin" caption="yes" maximizebutton="yes" minimizebutton="yes"
+  showintaskbar="yes" singleinstance="yes" sysmenu="yes" windowstate="normal" scroll="no"
+/>
+<style>
+:root{
+  --bg:#04080d; --bg2:#070d16;
+  --panel:#0a1220; --panel2:#0d1626;
+  --line:#12233a;
+  --cy:#00e5ff; --cy-dim:rgba(0,229,255,.35);
+  --pu:#7c4dff; --tx:#cfe6f5; --mu:#5c7a94;
+  --ok:#00e676; --warn:#ffb300; --bad:#ff3860; --or:#ff7043;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--tx);
+  font:12px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;
+  background-image:
+    linear-gradient(rgba(0,229,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.025) 1px, transparent 1px);
+  background-size:32px 32px;
+}
+.mono{font-family:Consolas,"Cascadia Code",monospace;font-variant-numeric:tabular-nums}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#16314a;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#1e4568}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 顶部 HUD ---------- */
+.hud{
+  height:56px;display:flex;align-items:center;padding:0 18px;gap:18px;
+  background:linear-gradient(180deg,#0a1626,#071020);
+  border-bottom:1px solid #16314a;position:relative;flex-shrink:0;
+}
+.hud::after{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cy),transparent);
+  animation:scanline 6s linear infinite;opacity:.6;
+}
+@keyframes scanline{0%{transform:translateX(-30%)}100%{transform:translateX(30%)}}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:2px;color:var(--cy)}
+.logo .hex{width:26px;height:26px;filter:drop-shadow(0 0 6px var(--cy-dim))}
+.logo .ver{font-size:9px;color:var(--mu);letter-spacing:1px;font-weight:400;margin-left:2px}
+.hud-stats{margin-left:auto;display:flex;gap:26px}
+.hs{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.hs .l{font-size:9px;color:var(--mu);letter-spacing:1.5px}
+.hs .v{font-size:16px;font-weight:700;text-shadow:0 0 8px currentColor}
+.lamp{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---------- 主体布局 ---------- */
+.main{display:flex;flex-direction:column;height:calc(100% - 56px);padding:12px 16px 14px;gap:10px;overflow:hidden}
+.panel{
+  background:linear-gradient(180deg,var(--panel),var(--bg2));
+  border:1px solid var(--line);border-radius:4px;padding:10px 12px;position:relative;
+}
+.panel::before,.panel::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--cy-dim)}
+.panel::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.panel::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+.ptitle{font-size:10px;font-weight:600;color:var(--mu);letter-spacing:1.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.ptitle .val{color:var(--cy);letter-spacing:0}
+
+.row{display:flex;gap:10px;flex-shrink:0}
+
+/* ---------- 仪表盘 ---------- */
+.gauge-box{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:132px;padding:6px 10px}
+.gauge-svg{width:120px;height:70px;filter:drop-shadow(0 0 6px rgba(0,229,255,.15))}
+.gbg{fill:none;stroke:#10243c;stroke-width:9}
+.gfill{fill:none;stroke-width:9;stroke-linecap:round}
+.gval{font-size:20px;font-weight:700;text-shadow:0 0 10px currentColor}
+.glabel{font-size:9px;color:var(--mu);letter-spacing:2px}
+
+.kv .item{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #12243a;font-size:11px}
+.kv .item:last-child{border-bottom:none}
+.kv .k{color:var(--mu);letter-spacing:.5px}
+.kv .v{text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)}
+
+.chart-box{flex:1;min-width:0;display:flex;flex-direction:column}
+#chart{flex:1;width:100%;min-height:64px}
+
+/* ---------- 警告横幅 ---------- */
+.banner{
+  display:none;align-items:center;gap:10px;padding:7px 12px;border-radius:4px;font-size:11px;flex-shrink:0;
+  background:rgba(255,56,96,.08);border:1px solid rgba(255,56,96,.45);color:var(--bad);
+  box-shadow:0 0 12px rgba(255,56,96,.12) inset;
+}
+.banner.show{display:flex;animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{box-shadow:0 0 12px rgba(255,56,96,.12) inset}50%{box-shadow:0 0 22px rgba(255,56,96,.3) inset}}
+.banner .tag{font-weight:700;font-size:9px;letter-spacing:1px;border:1px solid currentColor;border-radius:2px;padding:1px 6px}
+
+/* ---------- 图例 ---------- */
+.legend{display:flex;gap:16px;align-items:center;font-size:10px;color:var(--mu);flex-shrink:0;flex-wrap:wrap;letter-spacing:.5px}
+.rdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;box-shadow:0 0 6px currentColor}
+.rdot.low{background:var(--ok);color:var(--ok)} .rdot.med{background:var(--warn);color:var(--warn)}
+.rdot.high{background:var(--or);color:var(--or)} .rdot.no{background:var(--bad);color:var(--bad)}
+
+/* ---------- 工具栏 ---------- */
+.toolbar{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.search{
+  width:180px;height:26px;padding:0 10px;font-size:11px;color:var(--cy);
+  background:rgba(0,229,255,.04);border:1px solid #1b3a5c;border-radius:3px;outline:none;
+}
+.search:focus{border-color:var(--cy);box-shadow:0 0 8px rgba(0,229,255,.25)}
+.search::placeholder{color:var(--mu)}
+.chips{display:flex;gap:6px}
+.chip{
+  height:26px;padding:0 12px;font-size:11px;color:var(--mu);cursor:pointer;letter-spacing:.5px;
+  background:transparent;border:1px solid #1b3a5c;border-radius:3px;transition:all .15s;
+}
+.chip:hover{color:var(--tx);border-color:#2a5780}
+.chip.on{color:var(--cy);border-color:var(--cy);background:rgba(0,229,255,.08);box-shadow:0 0 10px rgba(0,229,255,.15)}
+.count{margin-left:auto;color:var(--mu);font-size:10px;letter-spacing:1px}
+
+/* ---------- 表格 ---------- */
+.table-panel{flex:1;display:flex;flex-direction:column;min-height:0}
+.twrap{flex:1;overflow-y:auto;border:1px solid var(--line);border-radius:3px;min-height:0;background:rgba(4,10,18,.5)}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{
+  position:sticky;top:0;z-index:2;padding:6px 10px;font-size:9px;font-weight:600;color:var(--mu);
+  letter-spacing:1.2px;text-align:left;background:#0a1524;border-bottom:1px solid #1b3a5c;
+  white-space:nowrap;cursor:pointer;user-select:none;
+}
+thead th:hover{color:var(--cy)}
+thead th .arr{color:var(--cy);margin-left:3px}
+td{padding:5px 10px;border-bottom:1px solid #0d1c2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+tbody tr{cursor:pointer;transition:background .12s}
+tbody tr:hover{background:rgba(0,229,255,.05)}
+tbody tr.sel{background:rgba(0,229,255,.09);box-shadow:inset 2px 0 0 var(--cy)}
+.num{text-align:right}
+.name-trae{color:var(--cy);font-weight:600}
+.name-prot{color:var(--mu)}
+.cbar{display:inline-block;width:40px;height:4px;background:#10243c;border-radius:2px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.cbar i{display:block;height:100%;box-shadow:0 0 6px currentColor}
+.cval{display:inline-block;width:42px;text-align:right;text-shadow:0 0 6px currentColor}
+.flash-up{animation:fup .8s}
+.flash-down{animation:fdn .8s}
+@keyframes fup{0%{color:var(--bad);text-shadow:0 0 12px var(--bad)}100%{}}
+@keyframes fdn{0%{color:var(--ok);text-shadow:0 0 12px var(--ok)}100%{}}
+
+.badge{display:inline-block;padding:1px 7px;font-size:9px;border-radius:2px;border:1px solid;letter-spacing:.5px}
+.badge.low{color:var(--ok);border-color:rgba(0,230,118,.45)}
+.badge.med{color:var(--warn);border-color:rgba(255,179,0,.45)}
+.badge.high{color:var(--or);border-color:rgba(255,112,67,.45)}
+.badge.no{color:var(--bad);border-color:rgba(255,56,96,.45)}
+.badge.can{color:var(--ok);border-color:rgba(0,230,118,.45)}
+.badge.cannot{color:var(--mu);border-color:#1b3a5c}
+.badge.prio{color:var(--pu);border-color:rgba(124,77,255,.45)}
+
+.reason{color:var(--mu);font-size:10px}
+
+/* ---------- 右键菜单 ---------- */
+.ctx{
+  display:none;position:fixed;z-index:200;min-width:190px;padding:4px;
+  background:linear-gradient(180deg,#0d1a2c,#081120);
+  border:1px solid #1f4a6e;border-radius:4px;
+  box-shadow:0 8px 28px rgba(0,0,0,.6),0 0 16px rgba(0,229,255,.1);
+}
+.ctx.show{display:block;animation:ctxin .12s}
+@keyframes ctxin{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.ctx-hd{padding:5px 10px;font-size:10px;color:var(--cy);border-bottom:1px solid #16314a;letter-spacing:1px}
+.ctx-hd .pid{color:var(--mu)}
+.ctx-it{
+  display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:11px;color:var(--tx);
+  cursor:pointer;border-radius:2px;user-select:none;
+}
+.ctx-it .ic{width:14px;text-align:center;color:var(--mu);font-family:Consolas,monospace}
+.ctx-it:hover{background:rgba(0,229,255,.1);color:#fff}
+.ctx-it:hover .ic{color:var(--cy)}
+.ctx-it.dis{color:#3a4f63;cursor:default}
+.ctx-it.dis:hover{background:transparent;color:#3a4f63}
+.ctx-it.danger{color:var(--bad)}
+.ctx-it.danger:hover{background:rgba(255,56,96,.12)}
+.ctx-sep{height:1px;background:#16314a;margin:3px 6px}
+
+/* ---------- 详情面板 ---------- */
+.detail{display:none;flex-shrink:0;max-height:218px;overflow-y:auto;background:linear-gradient(180deg,#0b1626,#071020);border:1px solid #1f4a6e;border-radius:4px;padding:12px 14px;position:relative}
+.detail.show{display:block;animation:din .18s}
+@keyframes din{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.detail::before,.detail::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--cy-dim)}
+.detail::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.detail::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+.dtitle{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:10px;color:var(--cy);text-shadow:0 0 10px rgba(0,229,255,.3)}
+.dgrid{display:flex;gap:16px}
+.dcol{flex:1;min-width:0}
+.dcol h3{font-size:9px;color:var(--mu);letter-spacing:1.5px;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #16314a}
+.dcol p{font-size:11px;line-height:1.75;color:var(--tx);word-break:break-all}
+.dclose{float:right;cursor:pointer;color:var(--mu);font-size:14px;padding:0 4px}
+.dclose:hover{color:var(--cy)}
+
+/* ---------- 日志 ---------- */
+.log{height:74px;overflow-y:auto;font-size:10px;line-height:1.65;font-family:Consolas,monospace;flex-shrink:0}
+.log .t{color:#3a5a76;margin-right:6px}
+.log .ok{color:var(--ok)} .log .err{color:var(--bad)} .log .info{color:var(--cy)}
+
+/* ---------- 模态框 ---------- */
+.modal{display:none;position:fixed;inset:0;background:rgba(2,6,12,.8);align-items:center;justify-content:center;z-index:300}
+.modal.show{display:flex}
+.mbox{
+  width:400px;background:linear-gradient(180deg,#0d1a2c,#081120);
+  border:1px solid #1f4a6e;border-radius:6px;padding:18px;position:relative;
+  box-shadow:0 16px 48px rgba(0,0,0,.7),0 0 24px rgba(255,56,96,.08);
+  animation:ctxin .15s;
+}
+.mbox::before,.mbox::after{content:"";position:absolute;width:12px;height:12px;border:1px solid var(--cy-dim)}
+.mbox::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
+.mbox::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
+.mtitle{font-size:14px;font-weight:700;margin-bottom:8px;color:#fff}
+.mtext{font-size:11px;color:var(--mu);margin-bottom:8px;line-height:1.7;word-break:break-all}
+.mrisk{font-size:11px;padding:8px 10px;border-radius:3px;margin-bottom:14px;line-height:1.65}
+.mrisk.med{background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.4);color:var(--warn)}
+.mrisk.high{background:rgba(255,112,67,.1);border:1px solid rgba(255,112,67,.4);color:var(--or)}
+.mbtns{display:flex;justify-content:flex-end;gap:8px}
+
+.btn{
+  height:24px;padding:0 10px;font-size:10px;cursor:pointer;border-radius:2px;letter-spacing:.5px;
+  background:rgba(0,229,255,.06);border:1px solid #1f4a6e;color:var(--tx);margin-left:4px;transition:all .12s;
+}
+.btn:hover{border-color:var(--cy);color:var(--cy);box-shadow:0 0 8px rgba(0,229,255,.2)}
+.btn:active{transform:translateY(1px)}
+.btn.danger{color:var(--bad);border-color:rgba(255,56,96,.4);background:rgba(255,56,96,.06)}
+.btn.danger:hover{box-shadow:0 0 8px rgba(255,56,96,.3)}
+.btn.accent{color:var(--cy);border-color:var(--cy)}
+.btn[disabled]{opacity:.4;cursor:default;box-shadow:none}
+</style>
+</head>
+<body>
+
+<header class="hud">
+  <div class="logo">
+    <svg class="hex" viewBox="0 0 24 24"><path d="M12 1 L22 6.5 V17.5 L12 23 L2 17.5 V6.5 Z" fill="none" stroke="#00e5ff" stroke-width="1.4"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="#00e5ff" stroke-width="1.2"/><circle cx="12" cy="12" r="1.1" fill="#00e5ff"/></svg>
+    SYS://MONITOR <span class="ver">v3.0</span>
+  </div>
+  <span class="lamp" id="liveDot"></span>
+  <div class="hud-stats">
+    <div class="hs"><span class="l">CPU LOAD</span><span class="v mono" id="hCpu">--</span></div>
+    <div class="hs"><span class="l">MEMORY</span><span class="v mono" id="hMem">--</span></div>
+    <div class="hs"><span class="l">PROCESSES</span><span class="v mono" id="hProc">--</span></div>
+    <div class="hs"><span class="l">THREADS</span><span class="v mono" id="hThread">--</span></div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="banner" id="banner"><span class="tag">ALERT</span><span id="bannerText"></span></div>
+
+  <div class="row">
+    <div class="panel gauge-box">
+      <div class="gauge-svg">
+        <svg viewBox="0 0 120 70">
+          <path class="gbg" d="M 15 60 A 50 50 0 0 1 105 60"></path>
+          <path class="gfill" id="gCpu" d="M 15 60 A 50 50 0 0 1 105 60" stroke="#00e5ff" stroke-dasharray="157" stroke-dashoffset="157"></path>
+        </svg>
+      </div>
+      <div class="gval mono" id="gCpuText">--</div>
+      <div class="glabel">CPU LOAD</div>
+    </div>
+    <div class="panel gauge-box">
+      <div class="gauge-svg">
+        <svg viewBox="0 0 120 70">
+          <path class="gbg" d="M 15 60 A 50 50 0 0 1 105 60"></path>
+          <path class="gfill" id="gMem" d="M 15 60 A 50 50 0 0 1 105 60" stroke="#7c4dff" stroke-dasharray="157" stroke-dashoffset="157"></path>
+        </svg>
+      </div>
+      <div class="gval mono" id="gMemText" style="color:#7c4dff">--</div>
+      <div class="glabel">MEMORY</div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="ptitle">SYSTEM INFO</div>
+      <div class="kv">
+        <div class="item"><span class="k">PROCESSOR</span><span class="v mono" id="sCpu">--</span></div>
+        <div class="item"><span class="k">CORES</span><span class="v mono" id="sCores">--</span></div>
+        <div class="item"><span class="k">UPTIME</span><span class="v mono" id="sUptime">--</span></div>
+      </div>
+    </div>
+    <div class="panel chart-box">
+      <div class="ptitle">CPU HISTORY <span class="val mono" id="chartNow">--</span></div>
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span>RISK:</span>
+    <span><span class="rdot low"></span>低 - 可放心优化</span>
+    <span><span class="rdot med"></span>中 - 丢失该程序未保存内容</span>
+    <span><span class="rdot high"></span>高 - 影响系统功能</span>
+    <span><span class="rdot no"></span>禁止 - 系统关键进程</span>
+    <span style="margin-left:auto;color:#3a5a76">右键进程行打开操作菜单</span>
+  </div>
+
+  <div class="panel table-panel">
+    <div class="toolbar">
+      <input class="search" id="search" placeholder="&gt; 按名称或 PID 筛选" onkeyup="onSearch(this.value)">
+      <div class="chips">
+        <button class="chip on" data-f="all" onclick="setFilter(this)">全部</button>
+        <button class="chip" data-f="high" onclick="setFilter(this)">高CPU</button>
+        <button class="chip" data-f="trae" onclick="setFilter(this)">Trae CN</button>
+        <button class="chip" data-f="canopt" onclick="setFilter(this)">可优化</button>
+      </div>
+      <button class="btn accent" id="btnOpt" onclick="optimize()">一键优化 (降优先级)</button>
+      <span class="count mono" id="count"></span>
+    </div>
+    <div class="twrap" id="twrap">
+      <table>
+        <thead><tr id="theadRow">
+          <th style="width:60px" class="num" data-k="pid">PID</th>
+          <th style="width:118px" data-k="name">进程</th>
+          <th style="width:104px" class="num" data-k="cpu">CPU</th>
+          <th style="width:70px" class="num" data-k="mem">内存</th>
+          <th style="width:76px" data-k="prio">优先级</th>
+          <th data-k="reason">这个程序是干什么的</th>
+          <th style="width:70px" data-k="risk">风险</th>
+          <th style="width:64px" class="num">操作</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="detail" id="detail">
+    <span class="dclose" onclick="hideDetail()">&#10005;</span>
+    <div class="dtitle" id="dtitle"></div>
+    <div class="dgrid">
+      <div class="dcol"><h3>程序说明</h3><p id="dDesc"></p></div>
+      <div class="dcol"><h3>为什么占用高</h3><p id="dReason"></p></div>
+      <div class="dcol"><h3>优化建议</h3><p id="dSuggest"></p></div>
+      <div class="dcol"><h3>操作风险</h3><p id="dRisk"></p></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">OPERATION LOG</div>
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<div class="ctx" id="ctx">
+  <div class="ctx-hd" id="ctxHd"></div>
+  <div class="ctx-it" data-act="detail"><span class="ic">i</span>查看详情</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-it" data-act="lower"><span class="ic">&#9660;</span>降为低优先级</div>
+  <div class="ctx-it" data-act="normal"><span class="ic">&#9650;</span>恢复正常优先级</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-it" data-act="locate"><span class="ic">&#128193;</span>打开文件位置</div>
+  <div class="ctx-it" data-act="copyname"><span class="ic">&#10697;</span>复制进程名</div>
+  <div class="ctx-it" data-act="copypid"><span class="ic">#</span>复制 PID</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-it danger" data-act="kill"><span class="ic">&#10005;</span>结束进程</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="mbox">
+    <div class="mtitle">结束进程</div>
+    <div class="mtext" id="mtext"></div>
+    <div class="mrisk" id="mrisk"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn danger" id="mok">确认结束</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 基础 ================= */
+var MAXH = 60;
+var histData = [];
+var filter = 'all', search = '', sortKey = 'cpu', sortDir = -1;
+var lastData = null, selPid = null, ctxPid = null;
+var wmi = null, sh = null, pending = null;
+var sysInfo = null;
+var prevCpu = {};
+var REFRESH_MS = 3000;
+
+try { wmi = new ActiveXObject("WbemScripting.SWbemLocator").ConnectServer(".", "root\\cimv2"); } catch(e) {}
+try { sh = new ActiveXObject("WScript.Shell"); } catch(e) {}
+
+var $ = function(id){ return document.getElementById(id); };
+var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+var cls = function(v){ return v >= 70 ? 'bad' : (v >= 30 ? 'warn' : 'ok'); };
+var CCLR = {ok:'#00e676', warn:'#ffb300', bad:'#ff3860'};
+
+window.onerror = function(msg, url, line){
+  log('脚本错误 (行 ' + line + '): ' + msg, 'err');
+  return false;
+};
+
+/* ================= 知识库：程序说明 + 原因 + 建议 + 风险 ================= */
+var RISK_ORDER = {no:4, high:3, med:2, low:1};
+function analyze(p){
+  var n = String(p.name).toLowerCase();
+
+  if (n.indexOf('trae') >= 0) {
+    var isCore = p.cpu >= 25 || p.mem >= 200;
+    return {
+      desc:'Trae CN —— AI 代码编辑器（基于 Electron，类似 VS Code）。多进程架构：主进程、界面渲染、GPU、AI 语言服务、扩展宿主各占一个进程。',
+      reason: isCore
+        ? 'Trae 核心进程（界面渲染 / AI 代码分析 / 项目索引）。AI 补全与代码索引会持续消耗 CPU；' + p.threads + ' 个线程，多标签页会进一步放大占用。'
+        : 'Trae 辅助进程（GPU 渲染 / 扩展宿主 / 网络服务），跟随核心进程产生负载。',
+      suggest: '先降优先级（立即见效且无风险）；要彻底释放 CPU 需保存代码后重启 Trae。关闭不用的标签页、禁用不常用插件也能明显降低占用。',
+      risk: 'med',
+      riskText: '结束该进程会丢失编辑器中未保存的代码和当前会话，但不影响操作系统；重启 Trae 后可重新打开项目。',
+      canOpt: true
+    };
+  }
+  if (n === 'explorer') {
+    return { desc:'Windows 资源管理器 —— 桌面、任务栏、文件管理窗口都由它提供。是你看到的整个桌面外壳。',
+      reason:'桌面刷新、缩略图生成、频繁开关文件夹窗口时占用升高。',
+      suggest:'一般无需处理。若卡顿可在任务管理器中"重新启动"它，桌面短暂黑屏后恢复。',
+      risk:'high', riskText:'结束它桌面和任务栏会立即消失（可重新运行 explorer.exe 恢复），不建议直接结束。',
+      canOpt:false };
+  }
+  if (n === 'msmpeng' || n.indexOf('mssense') >= 0) {
+    return { desc:'Windows Defender 杀毒引擎 —— 系统自带的实时病毒防护。',
+      reason:'正在实时扫描或全盘查杀。扫描大文件、下载、安装程序时 CPU 飙升，属于正常行为。',
+      suggest:'扫描会自动结束。可在 Windows 安全中心将开发目录加入排除项，减少对代码文件夹的反复扫描。',
+      risk:'med', riskText:'结束会暂时失去病毒防护；Windows 会自动重启该服务，不建议长期禁用。',
+      canOpt:false };
+  }
+  if (n === 'wsearch' || n === 'searchindexer' || n === 'searchprotocolhost' || n === 'searchfilterhost') {
+    return { desc:'Windows 搜索索引 —— 为文件内容建立索引，让开始菜单和资源管理器搜索更快。',
+      reason:'正在建索引（首次开机或大量新文件出现后集中发生），CPU 占用集中在建索引阶段。',
+      suggest:'可在 services.msc 将 Windows Search 设为手动/禁用，或缩小索引范围（仅索引常用文档目录）。',
+      risk:'low', riskText:'禁用后搜索变慢/不全，但不影响系统稳定性，随时可重新开启。',
+      canOpt:true };
+  }
+  if (n === 'svchost') {
+    return { desc:'Windows 服务宿主 —— 一个 svchost 同时承载多个系统服务（更新、网络、音频、打印等）。',
+      reason:'占用高通常是其中某个服务在忙（如 Windows Update 正在下载更新）。',
+      suggest:'在任务管理器中展开该 svchost 查看具体服务；若是 Windows Update，等待完成即可。',
+      risk:'no', riskText:'系统关键进程，禁止结束，否则可能导致系统服务崩溃甚至蓝屏。',
+      canOpt:false };
+  }
+  if (n === 'system' || n === 'system interrupts' || n === 'registry' || n === 'memory compression' || n === 'secure system') {
+    return { desc:'Windows 内核 / 内存压缩 / 硬件中断处理 —— 操作系统的最底层，不是普通程序。',
+      reason:'占用高通常由驱动或硬件引发（磁盘繁忙、驱动不兼容、外设中断风暴）。',
+      suggest:'更新主板/芯片组/显卡驱动；检查磁盘健康。结束它无意义也不可能。',
+      risk:'no', riskText:'系统核心组件，禁止结束，会导致蓝屏。',
+      canOpt:false };
+  }
+  if (n === 'csrss' || n === 'wininit' || n === 'winlogon' || n === 'smss' || n === 'services' || n === 'lsass') {
+    return { desc:'Windows 会话/安全子系统关键进程（登录、安全验证、会话管理）。',
+      reason:'正常情况下占用极低；若持续偏高，可能有驱动或安全软件冲突。',
+      suggest:'不需要任何操作。',
+      risk:'no', riskText:'强制结束会直接蓝屏或强制注销当前会话。',
+      canOpt:false };
+  }
+  if (n === 'dwm') {
+    return { desc:'桌面窗口管理器 —— 负责所有窗口的合成渲染、毛玻璃、动画效果。',
+      reason:'多窗口、动画、高分辨率屏幕会让它占用升高，属正常。',
+      suggest:'占用高可更新显卡驱动；在系统设置里关闭透明和动画效果可略微降低。',
+      risk:'no', riskText:'结束后屏幕会闪烁/黑屏，系统自动重启它，无意义。',
+      canOpt:false };
+  }
+  if (n === 'chrome' || n === 'msedge' || n === 'firefox' || n === '360se' || n === 'qqbrowser') {
+    return { desc:'浏览器 —— 多进程架构，每个标签页、每个扩展都是独立进程。',
+      reason:'标签页多、页面有视频/动画/复杂脚本时 CPU 升高。',
+      suggest:'关闭不用的标签页；按 Shift+Esc 打开浏览器自带任务管理器找出高占用页面；禁用高耗电扩展。',
+      risk:'low', riskText:'结束只会关闭对应标签页（未提交的网页表单数据可能丢失），无系统风险。',
+      canOpt:true };
+  }
+  if (n.indexOf('trustedinstaller') >= 0 || n === 'tiworker') {
+    return { desc:'Windows Update 模块安装器 —— 负责下载和安装系统更新补丁。',
+      reason:'正在后台下载或安装更新，CPU 和磁盘都会较高。',
+      suggest:'等待完成即可自动回落；可在设置中配置"使用时段"，让更新在空闲时段安装。',
+      risk:'low', riskText:'中断更新可能导致系统文件不完整，不建议结束，等待为佳。',
+      canOpt:false };
+  }
+  if (n.indexOf('mcshield') >= 0 || n.indexOf('mcafee') >= 0 || n.indexOf('webadvisor') >= 0 || n.indexOf('360') >= 0 || n.indexOf('huorong') >= 0) {
+    return { desc:'第三方安全软件（McAfee / 360 / 火绒等）实时监控引擎。',
+      reason:'实时扫描每个读写的文件；与 Windows Defender 叠加时会双倍消耗 CPU。',
+      suggest:'建议只保留一个安全软件——Windows 自带 Defender 已足够，卸载冗余第三方杀软效果立竿见影。',
+      risk:'low', riskText:'结束/卸载只是失去该厂商的防护（Defender 自动接管），无系统风险。',
+      canOpt:true };
+  }
+  if (n === 'onedrive' || n === 'steam' || n === 'epicgameslauncher' || n === 'baidunetdisk' || n === 'thunder') {
+    return { desc:'网盘 / 游戏平台 / 下载工具的后台客户端。',
+      reason:'后台上传下载、文件同步、自动更新游戏时消耗 CPU 和磁盘。',
+      suggest:'不需要时右键托盘图标直接退出；在其设置中关闭"开机自启"。',
+      risk:'low', riskText:'结束会中断正在进行的下载/同步，无其他风险。',
+      canOpt:true };
+  }
+  if (n === 'runtimebroker') {
+    return { desc:'UWP 应用权限代理 —— 管理微软商店应用（天气、照片等）的权限和后台活动。',
+      reason:'某个 UWP 应用在后台活跃时它随之升高。',
+      suggest:'可在 设置→隐私→后台应用 中关闭不需要的后台应用。',
+      risk:'low', riskText:'结束后商店应用可能异常，系统会自动重启它，基本无风险。',
+      canOpt:true };
+  }
+  if (n === 'ctfmon' || n === 'chtime' || n.indexOf('ime') >= 0) {
+    return { desc:'输入法框架（CTF 加载器 / 中文输入法服务）。',
+      reason:'切换输入法、输入时占用，通常很低。',
+      suggest:'无需处理；持续偏高可尝试更换或重装输入法。',
+      risk:'no', riskText:'结束后输入法无法使用，系统会尝试恢复。',
+      canOpt:false };
+  }
+  if (n === 'sihost' || n === 'taskhostw' || n === 'backgroundtaskhost' || n === 'shellexperiencehost' || n === 'startmenuexperiencehost' || n === 'searchhost' || n === 'searchapp' || n === 'textinputhost') {
+    return { desc:'Windows 外壳组件（开始菜单 / 搜索界面 / 任务视图 / 后台任务宿主）。',
+      reason:'打开开始菜单、搜索、任务视图时短暂升高属正常。',
+      suggest:'无需处理。',
+      risk:'no', riskText:'结束后开始菜单/搜索界面会消失，系统会自动重启，但不建议操作。',
+      canOpt:false };
+  }
+  if (n === 'wudfhost' || n === 'conhost' || n === 'fontdrvhost') {
+    return { desc:'Windows 基础设施（设备驱动宿主 / 控制台宿主 / 字体驱动）。',
+      reason:'占用通常很小且短暂。',
+      suggest:'无需处理；持续偏高时检查最近安装的输入法或外设驱动。',
+      risk:'no', riskText:'系统组件，不建议结束。',
+      canOpt:false };
+  }
+  if (n === 'spoolsv') {
+    return { desc:'打印后台服务 —— 管理打印队列。',
+      reason:'有打印任务或打印机驱动异常时升高。',
+      suggest:'不使用打印机可在 services.msc 中禁用 Print Spooler 服务。',
+      risk:'low', riskText:'结束后无法打印，重启服务即可恢复。',
+      canOpt:true };
+  }
+  if (n === 'node' || n === 'python' || n === 'java' || n === 'dotnet' || n === 'go') {
+    return { desc:'开发语言运行时（' + n + '）—— 正在执行某个脚本或服务程序。',
+      reason:'正在执行计算任务：编译、打包、本地服务器、数据处理等。',
+      suggest:'确认是哪个项目启动的；不需要的本地服务直接结束。若你不认识它，先查启动来源。',
+      risk:'med', riskText:'若是工作中的服务/编译任务，结束会中断任务。请确认来源后再操作。',
+      canOpt:true };
+  }
+  if (n === 'mshta') {
+    return { desc:'本监控面板自身（HTA 宿主进程），每 ' + (REFRESH_MS/1000) + ' 秒执行一次轻量 WMI 查询。',
+      reason:'占用极低，仅在刷新瞬间活动。',
+      suggest:'无需处理，关闭窗口即退出。',
+      risk:'low', riskText:'结束只是关闭监控面板本身。',
+      canOpt:true };
+  }
+  if (p.cpu >= 20) {
+    return { desc:'未识别程序 —— 不在内置知识库中，按指标推断。',
+      reason:'正在密集计算（压缩/编译/渲染/训练），也可能是异常死循环。',
+      suggest:'确认这是你自己启动的程序：不需要就结束它；持续莫名高占用且来源不明时，建议用 Defender 全盘查杀。',
+      risk:'med', riskText:'若是工作中的程序（编译/导出），结束会丢失进度。请先确认程序用途。',
+      canOpt:true };
+  }
+  return { desc:'常规后台进程 —— 不在重点知识库中，当前负载很低。', reason:'占用较低。', suggest:'无需处理。', risk:'low', riskText:'占用低，无需操作。', canOpt:false };
+}
+
+var RISK_LABEL = {low:'低', med:'中', high:'高', no:'禁止'};
+var PROTECTED = /^(system|idle|registry|memory compression|secure system|smss|csrss|wininit|winlogon|services|lsass|svchost|dwm|fontdrvhost|wudfhost|conhost)$/i;
+var PRIO_TEXT = {24:'实时', 13:'高', 10:'高于正常', 8:'正常', 6:'低于正常', 4:'低'};
+
+function log(msg, kind){
+  var e = document.createElement('div');
+  e.innerHTML = '<span class="t">[' + new Date().toLocaleTimeString('en-GB') + ']</span><span class="' + (kind||'info') + '">' + esc(msg) + '</span>';
+  var l = $('log');
+  l.insertBefore(e, l.firstChild);
+  while (l.children.length > 40) l.removeChild(l.lastChild);
+}
+
+function q(wql){
+  var out = [];
+  var items = new Enumerator(wmi.ExecQuery(wql, 'WQL', 48));
+  while (!items.atEnd()){ out.push(items.item()); items.moveNext(); }
+  return out;
+}
+
+/* ================= 数据采集 ================= */
+function loadSysInfo(){
+  try {
+    var c = q("SELECT Name, NumberOfCores, NumberOfLogicalProcessors FROM Win32_Processor")[0];
+    sysInfo = {
+      cpuName: c.Name.replace(/\s+/g,' ').trim(),
+      cores: c.NumberOfCores + 'C / ' + c.NumberOfLogicalProcessors + 'T',
+      logical: c.NumberOfLogicalProcessors
+    };
+  } catch(e){
+    sysInfo = { cpuName:'(无法读取)', cores:'-', logical: 1 };
+  }
+}
+
+function getData(){
+  var cpuTotal = 0;
+  try {
+    var c = q("SELECT PercentProcessorTime FROM Win32_PerfFormattedData_PerfOS_Processor WHERE Name='_Total'")[0];
+    cpuTotal = c ? c.PercentProcessorTime : 0;
+  } catch(e){}
+
+  var memPct = 0;
+  try {
+    var os = q("SELECT TotalVisibleMemorySize, FreePhysicalMemory FROM Win32_OperatingSystem")[0];
+    var totalMB = Math.round(os.TotalVisibleMemorySize/1024);
+    var freeMB  = Math.round(os.FreePhysicalMemory/1024);
+    memPct = totalMB > 0 ? Math.round((totalMB-freeMB)/totalMB*1000)/10 : 0;
+  } catch(e){}
+
+  var rows = q("SELECT IDProcess, Name, PercentProcessorTime, WorkingSet, ThreadCount, PriorityBase FROM Win32_PerfFormattedData_PerfProc_Process WHERE Name <> '_Total' AND Name <> 'Idle'");
+  var procs = [];
+  var procTotal = 0;
+  for (var i = 0; i < rows.length; i++){
+    var r = rows[i];
+    var pname = String(r.Name).replace(/#\d+$/, '');
+    var rawCpu = Number(r.PercentProcessorTime) || 0;
+    var cpuPct = Math.round(rawCpu / sysInfo.logical * 10) / 10;
+    var isProt = PROTECTED.test(pname);
+    var prio = Number(r.PriorityBase) || 8;
+    var item = {
+      pid: r.IDProcess,
+      name: pname,
+      cpu: cpuPct,
+      mem: Math.round((Number(r.WorkingSet)||0)/1048576),
+      threads: Number(r.ThreadCount)||0,
+      prio: prio,
+      prioText: PRIO_TEXT[prio] || String(prio),
+      trae: pname.toLowerCase().indexOf('trae') >= 0,
+      prot: isProt
+    };
+    var a = analyze(item);
+    item.desc = a.desc; item.reason = a.reason; item.suggest = a.suggest;
+    item.risk = isProt ? 'no' : a.risk;
+    item.riskText = isProt ? '系统关键进程，禁止结束。' : a.riskText;
+    item.canOpt = isProt ? false : a.canOpt;
+    procs.push(item);
+    procTotal++;
+  }
+  procs.sort(function(a,b){ return b.cpu - a.cpu; });
+  procs = procs.slice(0, 80);
+
+  var tt = 0;
+  for (var i = 0; i < procs.length; i++) tt += procs[i].threads;
+
+  return {
+    time: new Date().toLocaleTimeString('en-GB'),
+    cpu: cpuTotal, memUsedPct: memPct,
+    procCount: procTotal, threadTotal: tt,
+    processes: procs
+  };
+}
+
+/* ================= 渲染 ================= */
+function setGauge(id, textId, v, fixedColor){
+  var max = 157;
+  var el = $(id);
+  el.style.strokeDashoffset = max - max*Math.min(v,100)/100;
+  if (!fixedColor) el.style.stroke = CCLR[cls(v)];
+  var t = $(textId);
+  t.textContent = v.toFixed(0) + '%';
+  if (!fixedColor) t.style.color = CCLR[cls(v)];
+}
+
+function drawChart(){
+  var el = $('chart'), w = el.offsetWidth, h = el.offsetHeight;
+  if (w < 10) return;
+  el.width = w; el.height = h;
+  var ctx = el.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+  if (histData.length < 2) return;
+  var step = w/(MAXH-1);
+  for (var g = 25; g <= 75; g += 25){
+    var y = h - g/100*(h-8);
+    ctx.strokeStyle = '#0f2236'; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+    ctx.fillStyle = '#33506c'; ctx.font = '9px Consolas'; ctx.fillText(g+'%', w-26, y-2);
+  }
+  ctx.beginPath(); ctx.moveTo(0,h);
+  for (var i = 0; i < histData.length; i++) ctx.lineTo(i*step, h - histData[i]/100*(h-8));
+  ctx.lineTo((histData.length-1)*step, h); ctx.closePath();
+  var grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,'rgba(0,229,255,.28)'); grad.addColorStop(1,'rgba(0,229,255,0)');
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath();
+  ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 1.5;
+  ctx.shadowColor = 'rgba(0,229,255,.6)'; ctx.shadowBlur = 6;
+  for (var i = 0; i < histData.length; i++){
+    var x = i*step, y = h - histData[i]/100*(h-8);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  var lx = (histData.length-1)*step, ly = h - histData[histData.length-1]/100*(h-8);
+  ctx.beginPath(); ctx.arc(lx, ly, 2.5, 0, 6.3);
+  ctx.fillStyle = '#00e5ff'; ctx.fill();
+}
+
+function updateSortArrows(){
+  var ths = $('theadRow').getElementsByTagName('th');
+  for (var i = 0; i < ths.length; i++){
+    var k = ths[i].getAttribute('data-k');
+    if (!k) continue;
+    var base = ths[i].textContent.replace(/ [▲▼]$/,'');
+    ths[i].innerHTML = esc(base) + (k === sortKey ? '<span class="arr">' + (sortDir<0?'▼':'▲') + '</span>' : '');
+  }
+}
+
+function renderTable(procs){
+  var rows = procs.filter(function(p){
+    if (filter === 'high' && p.cpu < 10) return false;
+    if (filter === 'trae' && !p.trae) return false;
+    if (filter === 'canopt' && !p.canOpt) return false;
+    if (search){
+      var s = search.toLowerCase();
+      if (p.name.toLowerCase().indexOf(s) < 0 && String(p.pid).indexOf(s) < 0) return false;
+    }
+    return true;
+  });
+  rows.sort(function(a,b){
+    if (sortKey === 'reason'){ return a.reason.localeCompare(b.reason)*sortDir; }
+    if (sortKey === 'risk'){ return (RISK_ORDER[a.risk]-RISK_ORDER[b.risk])*sortDir; }
+    var va = a[sortKey], vb = b[sortKey];
+    if (typeof va === 'string') return va.localeCompare(vb)*sortDir;
+    return (va-vb)*sortDir;
+  });
+  $('count').textContent = 'SHOWING ' + rows.length + ' / ' + (lastData ? lastData.procCount : '?');
+
+  var html = '';
+  for (var i = 0; i < rows.length; i++){
+    var p = rows[i];
+    var c = cls(p.cpu);
+    var nameCls = p.trae ? 'name-trae' : (p.prot ? 'name-prot' : '');
+    var shortDesc = p.desc.split('。')[0].split(' —— ')[0];
+    if (shortDesc.length > 38) shortDesc = shortDesc.substr(0,38) + '...';
+    var flash = '';
+    if (prevCpu[p.pid] != null){
+      if (p.cpu - prevCpu[p.pid] >= 3) flash = ' flash-up';
+      else if (prevCpu[p.pid] - p.cpu >= 3) flash = ' flash-down';
+    }
+    var riskB = '<span class="badge ' + p.risk + '">' + RISK_LABEL[p.risk] + '</span>';
+    var prioB = '<span class="badge prio">' + esc(p.prioText) + '</span>';
+    var act = p.prot
+      ? '<span style="color:#3a5a76;font-size:10px">LOCKED</span>'
+      : '<button class="btn" onclick="event.cancelBubble=true;askKill(' + p.pid + ')">结束</button>';
+    html += '<tr' + (selPid === p.pid ? ' class="sel"' : '') +
+      ' onclick="showDetail(' + p.pid + ')" oncontextmenu="return ctxShow(event,' + p.pid + ')">' +
+      '<td class="num mono">' + p.pid + '</td>' +
+      '<td class="' + nameCls + '">' + esc(p.name) + '</td>' +
+      '<td class="num"><span class="cbar"><i style="width:' + Math.min(p.cpu,100) + '%;background:' + CCLR[c] + ';color:' + CCLR[c] + '"></i></span><span class="cval mono' + flash + '" style="color:' + CCLR[c] + '">' + p.cpu.toFixed(1) + '%</span></td>' +
+      '<td class="num mono">' + p.mem + 'MB</td>' +
+      '<td>' + prioB + '</td>' +
+      '<td class="reason">' + esc(shortDesc) + '</td>' +
+      '<td>' + riskB + '</td>' +
+      '<td class="num">' + act + '</td></tr>';
+    prevCpu[p.pid] = p.cpu;
+  }
+  $('tbody').innerHTML = html;
+  window._rows = rows;
+  updateSortArrows();
+}
+
+function findRow(pid){
+  if (!window._rows) return null;
+  for (var i = 0; i < window._rows.length; i++) if (window._rows[i].pid === pid) return window._rows[i];
+  return null;
+}
+
+function showDetail(pid){
+  var p = findRow(pid);
+  if (!p) return;
+  selPid = pid;
+  $('dtitle').innerHTML = esc(p.name) + ' <span class="mono" style="color:var(--mu);font-size:11px;font-weight:400">PID ' + p.pid + ' · CPU ' + p.cpu.toFixed(1) + '% · ' + p.mem + 'MB · ' + p.threads + ' 线程 · ' + esc(p.prioText) + '</span> <span class="badge ' + p.risk + '">风险:' + RISK_LABEL[p.risk] + '</span>';
+  $('dDesc').textContent = p.desc;
+  $('dReason').textContent = p.reason;
+  $('dSuggest').textContent = p.suggest;
+  $('dRisk').style.color = (p.risk === 'no' || p.risk === 'high') ? 'var(--bad)' : 'var(--warn)';
+  $('dRisk').textContent = p.riskText;
+  $('detail').className = 'detail show';
+  renderTable(lastData.processes);
+}
+function hideDetail(){ $('detail').className = 'detail'; selPid = null; if (lastData) renderTable(lastData.processes); }
+
+function render(d){
+  setGauge('gCpu','gCpuText',d.cpu);
+  setGauge('gMem','gMemText',d.memUsedPct, true);
+  $('hCpu').textContent = d.cpu.toFixed(0)+'%'; $('hCpu').style.color = CCLR[cls(d.cpu)];
+  $('hMem').textContent = d.memUsedPct.toFixed(0)+'%'; $('hMem').style.color = '#7c4dff';
+  $('hProc').textContent = d.procCount;
+  $('hThread').textContent = d.threadTotal;
+  $('sCpu').textContent = sysInfo.cpuName;
+  $('sCores').textContent = sysInfo.cores;
+  $('sUptime').textContent = fmtUptime();
+  $('chartNow').textContent = d.cpu.toFixed(1)+'%';
+  document.title = d.cpu.toFixed(0)+'% CPU - SYS://MONITOR';
+
+  histData.push(d.cpu);
+  if (histData.length > MAXH) histData.shift();
+  drawChart();
+
+  var trae = d.processes.filter(function(p){ return p.trae; });
+  var tc = 0; for (var i = 0; i < trae.length; i++) tc += trae[i].cpu;
+  var show = d.cpu >= 85 || trae.length > 12;
+  $('banner').className = show ? 'banner show' : 'banner';
+  if (show) $('bannerText').textContent = 'CPU ' + d.cpu.toFixed(0) + '% | Trae CN: ' + trae.length + ' 个进程，合计约 ' + tc.toFixed(0) + '% — 建议先降优先级，再择机重启 Trae';
+
+  renderTable(d.processes);
+}
+
+var bootMs = new Date().getTime();
+function fmtUptime(){
+  var ms = new Date().getTime() - bootMs + (window._bootOffset || 0);
+  var h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  return h + 'h ' + m + 'm';
+}
+
+/* ================= 刷新调度 ================= */
+var refreshing = false;
+function refresh(){
+  if (refreshing) { setTimeout(refresh, 300); return; }
+  refreshing = true;
+  try {
+    var d = getData();
+    lastData = d;
+    render(d);
+    $('liveDot').style.background = 'var(--ok)';
+    $('liveDot').style.boxShadow = '0 0 8px var(--ok)';
+  } catch(e){
+    $('liveDot').style.background = 'var(--bad)';
+    log('刷新失败: ' + e.message, 'err');
+  }
+  refreshing = false;
+  setTimeout(refresh, REFRESH_MS);
+}
+
+function sortBy(k){
+  if (sortKey === k) sortDir *= -1;
+  else { sortKey = k; sortDir = (k==='name'||k==='reason') ? 1 : -1; }
+  if (lastData) renderTable(lastData.processes);
+}
+$('theadRow').onclick = function(e){
+  var th = e.target;
+  while (th && th.tagName !== 'TH') th = th.parentNode;
+  if (th && th.getAttribute('data-k')) sortBy(th.getAttribute('data-k'));
+};
+function setFilter(btn){
+  filter = btn.getAttribute('data-f');
+  var chips = document.querySelectorAll('.chip');
+  for (var i = 0; i < chips.length; i++) chips[i].className = chips[i] === btn ? 'chip on' : 'chip';
+  if (lastData) renderTable(lastData.processes);
+}
+function onSearch(v){ search = v; if (lastData) renderTable(lastData.processes); }
+
+/* ================= 右键菜单 ================= */
+function ctxShow(e, pid){
+  var p = findRow(pid);
+  if (!p) return false;
+  ctxPid = pid;
+  $('ctxHd').innerHTML = esc(p.name) + ' <span class="pid mono">#' + p.pid + '</span>';
+  var items = $('ctx').getElementsByTagName('div');
+  var lock = p.prot;
+  for (var i = 0; i < items.length; i++){
+    var act = items[i].getAttribute('data-act');
+    if (!act) continue;
+    var dis = lock && (act === 'lower' || act === 'normal' || act === 'kill');
+    items[i].className = 'ctx-it' + (dis ? ' dis' : '') + (act === 'kill' ? (dis ? ' dis' : ' danger') : '');
+  }
+  var m = $('ctx');
+  m.className = 'ctx show';
+  var x = e.clientX, y = e.clientY;
+  if (x + m.offsetWidth > document.body.clientWidth) x = document.body.clientWidth - m.offsetWidth - 4;
+  if (y + m.offsetHeight > document.body.clientHeight) y = document.body.clientHeight - m.offsetHeight - 4;
+  m.style.left = x + 'px';
+  m.style.top = y + 'px';
+  e.cancelBubble = true;
+  e.returnValue = false;
+  return false;
+}
+function ctxHide(){ $('ctx').className = 'ctx'; }
+document.onclick = function(){ ctxHide(); };
+document.oncontextmenu = function(){ ctxHide(); };
+
+$('ctx').onclick = function(e){
+  var it = e.target;
+  while (it && !it.getAttribute('data-act')) it = it.parentNode;
+  if (!it || it.className.indexOf('dis') >= 0) return;
+  var act = it.getAttribute('data-act');
+  var p = findRow(ctxPid);
+  ctxHide();
+  if (!p){ log('进程已退出，无法操作 PID ' + ctxPid, 'err'); return; }
+  if (act === 'detail') showDetail(p.pid);
+  else if (act === 'lower') setPrio(p, 16384, '低于正常');
+  else if (act === 'normal') setPrio(p, 32, '正常');
+  else if (act === 'kill') askKill(p.pid);
+  else if (act === 'locate') locateFile(p);
+  else if (act === 'copyname') copyText(p.name);
+  else if (act === 'copypid') copyText(String(p.pid));
+};
+
+/* ================= 进程操作（WMI 原生，毫秒级） ================= */
+function setPrio(p, level, label){
+  try {
+    var wp = wmi.Get("Win32_Process.Handle='" + p.pid + "'");
+    var rc = wp.SetPriority(level);
+    if (rc === 0) log(p.name + ' (PID ' + p.pid + ') 优先级已设为「' + label + '」', 'ok');
+    else log('设置失败 PID ' + p.pid + '，返回码 ' + rc, 'err');
+  } catch(e){ log('设置失败: ' + e.message, 'err'); }
+}
+
+function locateFile(p){
+  try {
+    var r = q("SELECT ExecutablePath FROM Win32_Process WHERE ProcessId=" + p.pid)[0];
+    if (r && r.ExecutablePath){
+      sh.Run('explorer.exe /select,"' + r.ExecutablePath + '"', 1, false);
+      log('已打开文件位置: ' + r.ExecutablePath, 'ok');
+    } else {
+      log('无法获取 ' + p.name + ' 的路径（系统进程或权限不足）', 'err');
+    }
+  } catch(e){ log('打开文件位置失败: ' + e.message, 'err'); }
+}
+
+function copyText(s){
+  try {
+    window.clipboardData.setData('Text', s);
+    log('已复制: ' + s, 'ok');
+  } catch(e){ log('复制失败: ' + e.message, 'err'); }
+}
+
+function askKill(pid){
+  var p = findRow(pid);
+  if (!p) return;
+  if (p.prot){ log('已拦截: ' + p.name + ' 是系统关键进程，禁止结束', 'err'); return; }
+  pending = {pid:p.pid, name:p.name};
+  $('mtext').innerHTML = '即将结束 <b style="color:#fff">' + esc(p.name) + '</b> (PID ' + p.pid + ')';
+  $('mrisk').className = 'mrisk ' + (p.risk === 'no' ? 'high' : p.risk);
+  $('mrisk').textContent = '⚠ ' + p.riskText;
+  $('modal').className = 'modal show';
+}
+function closeModal(){ $('modal').className = 'modal'; pending = null; }
+$('mok').onclick = function(){
+  if (!pending) return;
+  var pid = pending.pid, name = pending.name;
+  closeModal();
+  try {
+    var wp = wmi.Get("Win32_Process.Handle='" + pid + "'");
+    var rc = wp.Terminate(0);
+    if (rc === 0) log('已结束进程 ' + name + ' (PID ' + pid + ')', 'ok');
+    else log('结束失败 PID ' + pid + '，系统返回码 ' + rc + '（可能需要管理员权限）', 'err');
+  } catch(e){ log('结束失败 PID ' + pid + ': ' + e.message, 'err'); }
+};
+
+function optimize(){
+  if (!lastData) return;
+  var btn = $('btnOpt');
+  btn.disabled = true;
+  var count = 0, fail = 0;
+  try {
+    for (var i = 0; i < lastData.processes.length; i++){
+      var p = lastData.processes[i];
+      if (!p.prot && p.canOpt && p.cpu > 10){
+        try {
+          var wp = wmi.Get("Win32_Process.Handle='" + p.pid + "'");
+          if (wp.SetPriority(16384) === 0) count++; else fail++;
+        } catch(e){ fail++; }
+      }
+    }
+    log('一键优化完成: ' + count + ' 个进程已降为「低于正常」' + (fail ? '，' + fail + ' 个失败' : '') + ' — 只调优先级，未结束任何进程', count ? 'ok' : 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+window.onresize = drawChart;
+
+/* ================= 启动 ================= */
+log('SYS://MONITOR 初始化...', 'info');
+setTimeout(function(){
+  try {
+    loadSysInfo();
+    try {
+      var os = q("SELECT LastBootUpTime FROM Win32_OperatingSystem")[0];
+      var m = /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(os.LastBootUpTime);
+      if (m) window._bootOffset = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]).getTime() - new Date().getTime();
+    } catch(e){}
+    log('系统信息加载完成，开始监控（每 ' + (REFRESH_MS/1000) + ' 秒刷新）', 'ok');
+    log('提示：右键进程行打开操作菜单；单击行查看详情', 'info');
+    refresh();
+  } catch(e){
+    log('初始化失败: ' + e.message, 'err');
+  }
+}, 100);
+</script>
+</body>
+</html>
