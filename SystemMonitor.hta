@@ -75,7 +75,7 @@ body{
 
 /* ---------- 顶部 HUD ---------- */
 .hud{
-  height:56px;display:flex;align-items:center;padding:0 18px;gap:14px;
+  height:56px;display:flex;align-items:center;padding:0 18px;
   background:linear-gradient(180deg,#0a1626,#071020);
   border-bottom:1px solid #16314a;position:relative;flex-shrink:0;overflow:hidden;
 }
@@ -85,18 +85,29 @@ body{
   animation:scanline 6s linear infinite;opacity:.6;
 }
 @keyframes scanline{0%{transform:translateX(-30%)}100%{transform:translateX(30%)}}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:2px;color:var(--cy);white-space:nowrap;flex-shrink:0}
-.logo .hex{width:26px;height:26px;filter:drop-shadow(0 0 6px var(--cy-dim))}
-.logo .ver{font-size:9px;color:var(--mu);letter-spacing:1px;font-weight:400;margin-left:2px}
-.hud-stats{margin-left:auto;display:flex;gap:18px;flex-shrink:0}
+.hud > * + *{margin-left:14px}
+.logo{display:flex;align-items:center;font-weight:700;font-size:15px;letter-spacing:2px;color:var(--cy);white-space:nowrap;flex-shrink:0}
+.logo .hex{width:26px;height:26px;filter:drop-shadow(0 0 6px var(--cy-dim));margin-right:10px}
+.logo .ver{font-size:9px;color:var(--mu);letter-spacing:1px;font-weight:400;margin-left:12px}
+.hud-stats{margin-left:auto;display:flex;flex-shrink:0}
+.hud-stats .hs + .hs{margin-left:18px}
 .hs{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;white-space:nowrap;flex-shrink:0}
 .hs .l{font-size:9px;color:var(--mu);letter-spacing:1.5px;white-space:nowrap}
 .hs .v{font-size:16px;font-weight:700;text-shadow:0 0 8px currentColor}
 .lamp{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 2s infinite}
+.admbadge{
+  display:inline-flex;align-items:center;height:20px;padding:0 10px;font-size:9px;letter-spacing:1px;
+  border-radius:2px;cursor:pointer;flex-shrink:0;border:1px solid #1b3a5c;color:var(--mu);
+  transition:all .15s;user-select:none;white-space:nowrap;
+}
+.admbadge:hover{border-color:var(--cy);color:var(--cy);box-shadow:0 0 8px rgba(0,229,255,.15)}
+.admbadge.on{color:var(--ok);border-color:rgba(0,230,118,.45);cursor:default}
+.admbadge.on:hover{border-color:rgba(0,230,118,.45);color:var(--ok);box-shadow:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* ---------- 主体布局 ---------- */
-.main{display:flex;flex-direction:column;height:calc(100% - 56px);padding:12px 16px 14px;gap:10px;overflow:hidden}
+.main{display:flex;flex-direction:column;height:calc(100% - 56px);padding:12px 16px 14px;overflow:hidden}
+.main > * + *{margin-top:10px}
 .panel{
   background:linear-gradient(180deg,var(--panel),var(--bg2));
   border:1px solid var(--line);border-radius:4px;padding:10px 12px;position:relative;
@@ -107,7 +118,8 @@ body{
 .ptitle{font-size:10px;font-weight:600;color:var(--mu);letter-spacing:1.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
 .ptitle .val{color:var(--cy);letter-spacing:0}
 
-.row{display:flex;gap:10px;flex-shrink:0}
+.row{display:flex;flex-shrink:0}
+.row > * + *{margin-left:10px}
 
 /* ---------- 仪表盘 ---------- */
 .gauge-box{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:132px;padding:6px 10px}
@@ -127,29 +139,32 @@ body{
 
 /* ---------- 警告横幅 ---------- */
 .banner{
-  display:none;align-items:center;gap:10px;padding:7px 12px;border-radius:4px;font-size:11px;flex-shrink:0;
+  display:none;align-items:center;padding:7px 12px;border-radius:4px;font-size:11px;flex-shrink:0;
   background:rgba(255,56,96,.08);border:1px solid rgba(255,56,96,.45);color:var(--bad);
   box-shadow:0 0 12px rgba(255,56,96,.12) inset;
 }
 .banner.show{display:flex;animation:blink 1.6s infinite}
 @keyframes blink{0%,100%{box-shadow:0 0 12px rgba(255,56,96,.12) inset}50%{box-shadow:0 0 22px rgba(255,56,96,.3) inset}}
-.banner .tag{font-weight:700;font-size:9px;letter-spacing:1px;border:1px solid currentColor;border-radius:2px;padding:1px 6px}
+.banner .tag{font-weight:700;font-size:9px;letter-spacing:1px;border:1px solid currentColor;border-radius:2px;padding:1px 6px;margin-right:10px}
 
 /* ---------- 图例 ---------- */
-.legend{display:flex;gap:16px;align-items:center;font-size:10px;color:var(--mu);flex-shrink:0;flex-wrap:wrap;letter-spacing:.5px}
+.legend{display:flex;align-items:center;font-size:10px;color:var(--mu);flex-shrink:0;flex-wrap:wrap;letter-spacing:.5px}
+.legend > * + *{margin-left:16px}
 .rdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;box-shadow:0 0 6px currentColor}
 .rdot.low{background:var(--ok);color:var(--ok)} .rdot.med{background:var(--warn);color:var(--warn)}
 .rdot.high{background:var(--or);color:var(--or)} .rdot.no{background:var(--bad);color:var(--bad)}
 
 /* ---------- 工具栏 ---------- */
-.toolbar{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.toolbar{display:flex;align-items:center;flex-shrink:0}
+.toolbar > * + *{margin-left:8px}
 .search{
   width:180px;height:26px;padding:0 10px;font-size:11px;color:var(--cy);
   background:rgba(0,229,255,.04);border:1px solid #1b3a5c;border-radius:3px;outline:none;
 }
 .search:focus{border-color:var(--cy);box-shadow:0 0 8px rgba(0,229,255,.25)}
 .search::placeholder{color:var(--mu)}
-.chips{display:flex;gap:6px}
+.chips{display:flex}
+.chips > * + *{margin-left:6px}
 .chip{
   height:26px;padding:0 12px;font-size:11px;color:var(--mu);cursor:pointer;letter-spacing:.5px;
   background:transparent;border:1px solid #1b3a5c;border-radius:3px;transition:all .15s;
@@ -209,10 +224,10 @@ tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .ctx-hd{padding:5px 10px;font-size:10px;color:var(--cy);border-bottom:1px solid #16314a;letter-spacing:1px}
 .ctx-hd .pid{color:var(--mu)}
 .ctx-it{
-  display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:11px;color:var(--tx);
+  display:flex;align-items:center;padding:6px 10px;font-size:11px;color:var(--tx);
   cursor:pointer;border-radius:2px;user-select:none;
 }
-.ctx-it .ic{width:14px;text-align:center;color:var(--mu);font-family:Consolas,monospace}
+.ctx-it .ic{width:14px;text-align:center;color:var(--mu);font-family:Consolas,monospace;margin-right:8px}
 .ctx-it:hover{background:rgba(0,229,255,.1);color:#fff}
 .ctx-it:hover .ic{color:var(--cy)}
 .ctx-it.dis{color:#3a4f63;cursor:default}
@@ -228,8 +243,10 @@ tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .detail::before,.detail::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--cy-dim)}
 .detail::before{top:-1px;left:-1px;border-right:none;border-bottom:none}
 .detail::after{bottom:-1px;right:-1px;border-left:none;border-top:none}
-.dtitle{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:10px;color:var(--cy);text-shadow:0 0 10px rgba(0,229,255,.3)}
-.dgrid{display:flex;gap:16px}
+.dtitle{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;color:var(--cy);text-shadow:0 0 10px rgba(0,229,255,.3)}
+.dtitle > * + *{margin-left:10px}
+.dgrid{display:flex}
+.dgrid > * + *{margin-left:16px}
 .dcol{flex:1;min-width:0}
 .dcol h3{font-size:9px;color:var(--mu);letter-spacing:1.5px;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #16314a}
 .dcol p{font-size:11px;line-height:1.75;color:var(--tx);word-break:break-all}
@@ -242,7 +259,7 @@ tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .log .ok{color:var(--ok)} .log .err{color:var(--bad)} .log .info{color:var(--cy)}
 
 /* ---------- 模态框 ---------- */
-.modal{display:none;position:fixed;inset:0;background:rgba(2,6,12,.8);align-items:center;justify-content:center;z-index:300}
+.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,6,12,.8);align-items:center;justify-content:center;z-index:300}
 .modal.show{display:flex}
 .mbox{
   width:400px;background:linear-gradient(180deg,#0d1a2c,#081120);
@@ -259,7 +276,7 @@ tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .mrisk.med{background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.4);color:var(--warn)}
 .mrisk.high{background:rgba(255,112,67,.1);border:1px solid rgba(255,112,67,.4);color:var(--or)}
 .mrisk.low{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.35);color:var(--ok)}
-.mbtns{display:flex;justify-content:flex-end;gap:8px}
+.mbtns{display:flex;justify-content:flex-end}
 
 .btn{
   height:24px;padding:0 10px;font-size:10px;cursor:pointer;border-radius:2px;letter-spacing:.5px;
@@ -271,19 +288,21 @@ tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .btn.danger:hover{box-shadow:0 0 8px rgba(255,56,96,.3)}
 .btn.accent{color:var(--cy);border-color:var(--cy)}
 .btn[disabled]{opacity:.4;cursor:default;box-shadow:none}
+.mbtns .btn + .btn{margin-left:12px}
 
 /* ---------- Toast 通知 ---------- */
-.toast-wrap{position:fixed;top:70px;right:16px;z-index:400;display:flex;flex-direction:column;gap:8px}
+.toast-wrap{position:fixed;top:70px;right:16px;z-index:400;display:flex;flex-direction:column}
+.toast-wrap > * + *{margin-top:8px}
 .toast{
   min-width:260px;max-width:360px;padding:10px 14px;border-radius:4px;font-size:11px;line-height:1.55;
   background:linear-gradient(180deg,#0d1a2c,#081120);border:1px solid #1f4a6e;
-  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:toastin .2s;display:flex;align-items:flex-start;gap:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:toastin .2s;display:flex;align-items:flex-start;
 }
 body.light .toast{background:linear-gradient(180deg,#ffffff,#f0f5fa);border-color:#b8c9da;box-shadow:0 8px 24px rgba(0,0,0,.15)}
 .toast.out{animation:toastout .25s forwards}
 @keyframes toastin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 @keyframes toastout{to{opacity:0;transform:translateX(20px)}}
-.toast .tic{width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#04080d}
+.toast .tic{width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;margin-right:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#04080d}
 .toast.ok .tic{background:var(--ok)} .toast.err .tic{background:var(--bad);color:#fff} .toast.info .tic{background:var(--cy)}
 .toast .tmsg{flex:1}
 .toast .ttitle{font-weight:700;margin-bottom:2px}
@@ -307,6 +326,7 @@ body.light .themeswitch{background:rgba(2,136,209,.08);border-color:#b8c9da}
   </div>
   <span class="lamp" id="liveDot"></span>
   <span class="themeswitch" id="themeBtn" onclick="toggleTheme()" title="切换明/暗主题">◐</span>
+  <span class="admbadge" id="admBadge" onclick="askElevate()" title="当前权限状态，点击可切换为管理员模式">普通权限</span>
   <div class="hud-stats">
     <div class="hs"><span class="l">CPU LOAD</span><span class="v mono" id="hCpu">--</span></div>
     <div class="hs"><span class="l">MEMORY</span><span class="v mono" id="hMem">--</span></div>
@@ -430,6 +450,25 @@ body.light .themeswitch{background:rgba(2,136,209,.08);border-color:#b8c9da}
     <div class="mbtns">
       <button class="btn" onclick="closeModal()">取消</button>
       <button class="btn danger" id="mok">确认结束</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="admModal">
+  <div class="mbox">
+    <div class="mtitle">以管理员身份运行？</div>
+    <div class="mtext">
+      普通权限下只能结束<b style="color:#fff">当前用户</b>启动的进程；结束系统服务或其他用户的进程会提示「拒绝访问」，且每次都要弹 UAC 确认。<br><br>
+      以管理员身份重启后（只需确认一次 UAC）：<br>
+      • 结束进程不再弹 UAC，直接生效<br>
+      • 系统关键进程<b style="color:#fff">仍然禁止</b>结束（保护规则不受权限影响）<br>
+      • 仅提升本机进程操作权限，不涉及任何网络行为
+    </div>
+    <div class="mrisk low">提权只影响「结束进程/调优先级」的权限范围，监控与显示功能不受影响</div>
+    <div class="mbtns">
+      <button class="btn" onclick="skipElevate(true)">不再询问</button>
+      <button class="btn" onclick="closeAdm()">暂时不用</button>
+      <button class="btn accent" onclick="relaunchElevated()">以管理员身份重启</button>
     </div>
   </div>
 </div>
@@ -651,6 +690,39 @@ function storeSet(k, v){
   _memStore[k] = v;
   try { if (window.localStorage) localStorage.setItem(k, v); return; } catch(e){}
   try { document.cookie = k + '=' + encodeURIComponent(v) + ';expires=Fri, 31 Dec 9999 23:59:59 GMT;path=/'; } catch(e){}
+}
+
+/* ================= 管理员权限 ================= */
+var IS_ADMIN = false;
+function detectAdmin(){
+  /* 通过向 HKLM 写入测试键值判断提权状态：纯 COM 调用，无外部进程、不冻结界面 */
+  try {
+    var w = new ActiveXObject('WScript.Shell');
+    var k = 'HKLM\\SOFTWARE\\_sysmon_adm_test_';
+    w.RegWrite(k, 1, 'REG_DWORD');
+    /* 写入成功即已提权；删除失败仅清理失败，不影响判定 */
+    try { w.RegDelete(k); } catch(e2){}
+    return true;
+  } catch(e){ return false; }
+}
+function askElevate(){ if (IS_ADMIN) return; $('admModal').className = 'modal show'; }
+function closeAdm(){ $('admModal').className = 'modal'; }
+function relaunchElevated(){
+  closeAdm();
+  try {
+    var p = decodeURIComponent(location.pathname).replace(/^\/([A-Za-z]:)/, '$1').replace(/\//g, '\\');
+    new ActiveXObject('Shell.Application').ShellExecute('mshta.exe', '"' + p + '"', '', 'runas', 1);
+    log('已请求管理员权限重启，UAC 确认后本窗口自动关闭', 'info');
+    setTimeout(function(){ try { window.close(); } catch(e){} }, 400);
+  } catch(e){
+    toast('未提权', '已取消，继续以普通权限运行（结束高权限进程时会弹 UAC）', 'info');
+    log('提权重启被取消', 'err');
+  }
+}
+function skipElevate(never){
+  if (never) storeSet('sm_elevate', '0');
+  closeAdm();
+  toast('普通权限模式', '可结束当前用户的进程；系统关键进程始终禁止结束', 'info');
 }
 
 var _theme = storeGet('sm_theme') || 'light';
@@ -1080,7 +1152,7 @@ $('mok').onclick = function(){
       toast('已请求管理员权限', '请在 UAC 弹窗中点"是"以结束 ' + name, 'info');
       log('已发起提权结束请求 PID ' + pid, 'info');
     } catch(e){
-      toast('结束失败', '权限不足，请以管理员身份运行本程序', 'err');
+      toast('结束失败', IS_ADMIN ? '该进程受系统保护' : '权限不足 — 点击顶部「普通权限」徽章提权重启', 'err');
       log('结束失败 PID ' + pid + ': ' + e.message, 'err');
       return;
     }
@@ -1097,7 +1169,7 @@ $('mok').onclick = function(){
         renderTable(lastData.processes);
       }
     } else {
-      toast('进程仍存活', name + ' 需要管理员权限，已请求 UAC 提权', 'err');
+      toast('进程仍存活', name + (IS_ADMIN ? ' 受系统保护，无法结束' : ' 需要更高权限 — 可点击顶部「普通权限」徽章提权重启'), 'err');
       log('结束 PID ' + pid + ' 后验证进程仍存活', 'err');
     }
   }, killed ? 400 : 1200);
@@ -1137,6 +1209,16 @@ try {
   }
 } catch(e){}
 applyTheme();
+
+/* 权限检测与标识 */
+try {
+  IS_ADMIN = detectAdmin();
+  var ab = $('admBadge');
+  if (IS_ADMIN){ ab.textContent = 'ADMIN'; ab.className = 'admbadge on'; }
+  log(IS_ADMIN ? '已以管理员身份运行：结束进程不再弹 UAC' : '当前为普通权限：结束系统/其他用户进程时需提权（点击顶部「普通权限」徽章可提权重启）', IS_ADMIN ? 'ok' : 'info');
+  if (!IS_ADMIN && storeGet('sm_elevate') !== '0') setTimeout(askElevate, 600);
+} catch(e){}
+
 log('SYS://MONITOR 初始化...', 'info');
 setTimeout(function(){
   try {
