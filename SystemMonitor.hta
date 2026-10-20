@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -75,9 +75,9 @@ body{
 
 /* ---------- 顶部 HUD ---------- */
 .hud{
-  height:56px;display:flex;align-items:center;padding:0 18px;gap:18px;
+  height:56px;display:flex;align-items:center;padding:0 18px;gap:14px;
   background:linear-gradient(180deg,#0a1626,#071020);
-  border-bottom:1px solid #16314a;position:relative;flex-shrink:0;
+  border-bottom:1px solid #16314a;position:relative;flex-shrink:0;overflow:hidden;
 }
 .hud::after{
   content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
@@ -85,12 +85,12 @@ body{
   animation:scanline 6s linear infinite;opacity:.6;
 }
 @keyframes scanline{0%{transform:translateX(-30%)}100%{transform:translateX(30%)}}
-.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:2px;color:var(--cy)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:2px;color:var(--cy);white-space:nowrap;flex-shrink:0}
 .logo .hex{width:26px;height:26px;filter:drop-shadow(0 0 6px var(--cy-dim))}
 .logo .ver{font-size:9px;color:var(--mu);letter-spacing:1px;font-weight:400;margin-left:2px}
-.hud-stats{margin-left:auto;display:flex;gap:26px}
-.hs{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
-.hs .l{font-size:9px;color:var(--mu);letter-spacing:1.5px}
+.hud-stats{margin-left:auto;display:flex;gap:18px;flex-shrink:0}
+.hs{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;white-space:nowrap;flex-shrink:0}
+.hs .l{font-size:9px;color:var(--mu);letter-spacing:1.5px;white-space:nowrap}
 .hs .v{font-size:16px;font-weight:700;text-shadow:0 0 8px currentColor}
 .lamp{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -178,9 +178,9 @@ tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .num{text-align:right}
 .name-trae{color:var(--cy);font-weight:600}
 .name-prot{color:var(--mu)}
-.cbar{display:inline-block;width:40px;height:4px;background:#10243c;border-radius:2px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.cbar{display:inline-block;width:32px;height:4px;background:#10243c;border-radius:2px;overflow:hidden;vertical-align:middle;margin-right:6px}
 .cbar i{display:block;height:100%;box-shadow:0 0 6px currentColor}
-.cval{display:inline-block;width:42px;text-align:right;text-shadow:0 0 6px currentColor}
+.cval{display:inline-block;width:48px;text-align:right;text-shadow:0 0 6px currentColor}
 .flash-up{animation:fup .8s}
 .flash-down{animation:fdn .8s}
 @keyframes fup{0%{color:var(--bad);text-shadow:0 0 12px var(--bad)}100%{}}
@@ -379,7 +379,7 @@ body.light .themeswitch{background:rgba(2,136,209,.08);border-color:#b8c9da}
         <thead><tr id="theadRow">
           <th style="width:60px" class="num" data-k="pid">PID</th>
           <th style="width:118px" data-k="name">进程</th>
-          <th style="width:104px" class="num" data-k="cpu">CPU</th>
+          <th style="width:124px" class="num" data-k="cpu">CPU</th>
           <th style="width:70px" class="num" data-k="mem">内存</th>
           <th style="width:76px" data-k="prio">优先级</th>
           <th data-k="reason">这个程序是干什么的</th>
@@ -793,7 +793,7 @@ function updateSortArrows(){
   for (var i = 0; i < ths.length; i++){
     var k = ths[i].getAttribute('data-k');
     if (!k) continue;
-    var base = ths[i].textContent.replace(/ [▲▼]$/,'');
+    var base = ths[i].textContent.replace(/[\s▲▼]+$/,'');
     ths[i].innerHTML = esc(base) + (k === sortKey ? '<span class="arr">' + (sortDir<0?'▼':'▲') + '</span>' : '');
   }
 }
@@ -1129,6 +1129,13 @@ function optimize(){
 window.onresize = drawChart;
 
 /* ================= 启动 ================= */
+// 保证窗口不小于布局最小需求宽度，避免 HUD/表格挤压重叠
+try {
+  if (window.screen.availWidth >= 1180) {
+    window.resizeTo(1180, 780);
+    window.moveTo(Math.max(0,(window.screen.availWidth-1180)/2), Math.max(0,(window.screen.availHeight-780)/2 - 20));
+  }
+} catch(e){}
 applyTheme();
 log('SYS://MONITOR 初始化...', 'info');
 setTimeout(function(){
