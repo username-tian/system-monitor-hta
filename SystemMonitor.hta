@@ -289,6 +289,20 @@ tbody tr.sel{background:rgba(0,229,255,.1);box-shadow:inset 3px 0 0 var(--cy)}
 .btn.accent{color:var(--cy);border-color:var(--cy)}
 .btn[disabled]{opacity:.4;cursor:default;box-shadow:none}
 .mbtns .btn + .btn{margin-left:12px}
+.mbox.wide{width:620px;max-height:80%;overflow-y:auto}
+.su-item{display:flex;align-items:center;padding:7px 4px;border-bottom:1px dashed #16314a;font-size:11px}
+.su-item:last-child{border-bottom:none}
+.su-name{font-weight:600;color:var(--tx);white-space:nowrap}
+.su-cmd{color:var(--mu);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;margin-left:8px}
+.su-tag{padding:1px 7px;font-size:9px;border-radius:2px;border:1px solid;letter-spacing:.5px;flex-shrink:0;margin-left:8px}
+.su-tag.off{color:var(--bad);border-color:rgba(255,56,96,.45)}
+.su-tag.warn{color:var(--warn);border-color:rgba(255,179,0,.45)}
+.su-tag.keep{color:var(--ok);border-color:rgba(0,230,118,.45)}
+.su-desc{font-size:10px;color:var(--mu);margin-top:2px}
+.su-diag{font-size:11px;line-height:1.7;padding:8px 10px;border-radius:3px;background:rgba(0,229,255,.05);border:1px solid #1b3a5c;margin-bottom:10px}
+.su-diag b{color:var(--cy)}
+.su-diag .bad{color:var(--bad)}
+.su-diag .warn{color:var(--warn)}
 
 /* ---------- Toast 通知 ---------- */
 .toast-wrap{position:fixed;top:70px;right:16px;z-index:400;display:flex;flex-direction:column}
@@ -390,6 +404,7 @@ body.light .themeswitch{background:rgba(2,136,209,.08);border-color:#b8c9da}
         <button class="chip" data-f="high" onclick="setFilter(this)">高CPU</button>
         <button class="chip" data-f="trae" onclick="setFilter(this)">Trae CN</button>
         <button class="chip" data-f="canopt" onclick="setFilter(this)">可优化</button>
+        <button class="chip" onclick="event.cancelBubble=true;openSu()">启动项诊断</button>
       </div>
       <button class="btn accent" id="btnOpt" onclick="optimize()">一键优化 (降优先级)</button>
       <span class="count mono" id="count"></span>
@@ -474,6 +489,18 @@ body.light .themeswitch{background:rgba(2,136,209,.08);border-color:#b8c9da}
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
+
+<div class="modal" id="suModal">
+  <div class="mbox wide">
+    <div class="mtitle">启动项诊断 <span style="float:right;cursor:pointer;color:var(--mu);font-size:14px;padding:0 4px" onclick="closeSu()">×</span></div>
+    <div class="su-diag" id="suDiag">加载中...</div>
+    <div id="suList"></div>
+    <div class="mtext" style="margin-top:8px">禁用仅取消开机自启（已备份可恢复），不会卸载软件；系统项与正在使用的组件请保留。</div>
+    <div class="mbtns">
+      <button class="btn accent" onclick="closeSu()">完成</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ================= 基础 ================= */
@@ -690,6 +717,133 @@ function storeSet(k, v){
   _memStore[k] = v;
   try { if (window.localStorage) localStorage.setItem(k, v); return; } catch(e){}
   try { document.cookie = k + '=' + encodeURIComponent(v) + ';expires=Fri, 31 Dec 9999 23:59:59 GMT;path=/'; } catch(e){}
+}
+
+/* ================= 启动项诊断 ================= */
+var SU_KB = [
+  {k:/EdgeAutoLaunch/i,      d:'Edge 浏览器后台预加载，开机即驻留内存', a:'off'},
+  {k:/OneDrive/i,            d:'微软云同步客户端', a:'warn'},
+  {k:/Mozilla.?Firefox/i,    d:'Firefox 浏览器自启加速，一般可禁', a:'warn'},
+  {k:/SecurityHealth/i,      d:'Windows 安全中心托盘图标', a:'keep'},
+  {k:/RtkAudUService/i,      d:'Realtek 音频组件，禁用可能失去音效设置', a:'keep'},
+  {k:/SupportAssist|aha_doctor|dell/i, d:'戴尔预装推广/诊断软件，普通用户用不到', a:'off'},
+  {k:/mc|McAfee/i,           d:'McAfee 杀毒，与 Windows Defender 双杀软并存拖慢系统，建议卸载而非仅禁自启', a:'off'},
+  {k:/AWCC|Alienware/i,      d:'外星人灯效/超频控制中心，不用灯效可禁', a:'warn'},
+  {k:/Teams|Skype/i,         d:'通讯软件自启，不用可禁', a:'off'}
+];
+function suKb(name, cmd){
+  for (var i = 0; i < SU_KB.length; i++) if (SU_KB[i].k.test(name) || SU_KB[i].k.test(cmd)) return SU_KB[i];
+  return {d:'未知项，建议先查看命令路径确认来源', a:'warn'};
+}
+function suTag(a){ return a === 'off' ? '<span class="su-tag off">建议禁</span>' : a === 'keep' ? '<span class="su-tag keep">保留</span>' : '<span class="su-tag warn">看情况</span>'; }
+function suParseLoc(loc){
+  /* 返回 {hive:'HKCU'|'HKLM', path:'注册表子键'} 或 null（非注册表项） */
+  if (/^HKU\\/i.test(loc)) return {hive:'HKCU', path: loc.replace(/^HKU\\S-1-5-[\d\-]+\\/i, '')};
+  if (/^HKLM\\/i.test(loc)) return {hive:'HKLM', path: loc.replace(/^HKLM\\/i, '')};
+  return null;
+}
+function suBtn(name, loc){
+  return '<button class="btn danger" style="margin-left:8px;flex-shrink:0" onclick="event.cancelBubble=true;toggleSu(\'' + esc(name) + '\',\'' + esc(loc) + '\')">禁用</button>';
+}
+function openSu(){
+  $('suModal').className = 'modal show';
+  $('suDiag').innerHTML = '正在读取启动项与安全软件信息...';
+  $('suList').innerHTML = '';
+  setTimeout(loadSu, 80);
+}
+function closeSu(){ $('suModal').className = 'modal'; }
+function loadSu(){
+  try {
+    var items = q("SELECT Name, Command, Location FROM Win32_StartupCommand");
+    var diag = '开机自启动共 <b>' + items.length + '</b> 项。';
+    try {
+      var wsc = GetObject('winmgmts:{impersonationLevel=impersonate}!\\\\.\\root\\SecurityCenter2');
+      var avs = new Enumerator(wsc.ExecQuery("SELECT displayName FROM AntiVirusProduct", 'WQL', 48));
+      var names = [];
+      while (!avs.atEnd()){ names.push(avs.item().displayName); avs.moveNext(); }
+      if (names.length > 1) diag += '<span class="bad">检测到 ' + names.length + ' 个杀毒软件（' + esc(names.join('、')) + '）——双杀软并存是系统卡顿的主要原因之一，建议只保留 Windows Defender，卸载其余。</span>';
+      else diag += '杀毒软件：' + esc(names.join('、') || '未检测到') + '。';
+    } catch(e){ diag += '（杀软检测不可用）'; }
+    if (lastData && lastData.processes){
+      var junk = [];
+      for (var i = 0; i < lastData.processes.length; i++){
+        var n = lastData.processes[i].name;
+        if (/^mc-|mcafee|supportassist|aha_doctor|AWCC/i.test(n) && junk.indexOf(n) < 0) junk.push(n);
+      }
+      if (junk.length) diag += '<br><span class="bad">当前正在运行的预装后台：' + esc(junk.join('、')) + ' —— 属推广/厂商软件，可在下方禁用自启，或直接卸载以根治。</span>';
+    }
+    $('suDiag').innerHTML = diag;
+    var html = '';
+    for (var i = 0; i < items.length; i++){
+      var it = items[i], kb = suKb(it.Name, it.Command), p = suParseLoc(it.Location);
+      var btn = p
+        ? ((p.hive === 'HKLM' && !IS_ADMIN) ? '<span class="su-tag warn" style="margin-left:8px">需管理员</span>' : suBtn(it.Name, it.Location))
+        : '<span class="su-tag warn" style="margin-left:8px">文件夹项</span>';
+      html += '<div class="su-item"><div style="min-width:0"><span class="su-name">' + esc(it.Name) + '</span>' + suTag(kb.a) +
+        '<div class="su-cmd" title="' + esc(it.Command) + '">' + esc(it.Command) + '</div>' +
+        '<div class="su-desc">' + esc(kb.d) + '</div></div>' + btn + '</div>';
+    }
+    var bk = suBackupList();
+    if (bk.length) html += '<div style="font-size:10px;color:var(--mu);margin:8px 0 2px">已禁用（可恢复）：</div>';
+    for (var i = 0; i < bk.length; i++){
+      html += '<div class="su-item"><div style="min-width:0"><span class="su-name">' + esc(bk[i].name) + '</span><span class="su-tag keep" style="margin-left:8px">已禁用</span></div>' +
+        '<button class="btn" style="margin-left:8px;flex-shrink:0" onclick="event.cancelBubble=true;suRestore(\'' + esc(bk[i].name) + '\')">启用</button></div>';
+    }
+    $('suList').innerHTML = html || '未发现启动项';
+    log('启动项诊断完成: ' + items.length + ' 项, 已禁用 ' + bk.length + ' 项', 'ok');
+  } catch(e){
+    $('suDiag').innerHTML = '读取失败: ' + esc(e.message);
+  }
+}
+function suBkValName(n){ return n.replace(/[\\\/]/g, '_'); }
+function suBackupList(){
+  var out = [];
+  /* 枚举备份键：RegRead 无法枚举，改用 WMI StdRegProv */
+  try {
+    var reg = GetObject('winmgmts:{impersonationLevel=impersonate}!\\\\.\\root\\default:StdRegProv');
+    var names = reg.EnumValues(2147483648, 'SOFTWARE\\SYSMON_SU').sValueNames;
+    if (names){
+      var seen = {};
+      for (var i = 0; i < names.length; i++){
+        var m = /^(.+)__v$/.exec(names[i]);
+        if (m && !seen[m[1]]){ seen[m[1]] = 1; out.push({name: m[1]}); }
+      }
+    }
+  } catch(e){}
+  return out;
+}
+function toggleSu(name, loc){
+  var p = suParseLoc(loc);
+  if (!p){ toast('无法禁用', '该项位于启动文件夹，请手动移除快捷方式', 'err'); return; }
+  if (p.hive === 'HKLM' && !IS_ADMIN){ toast('需要管理员权限', '点击顶部「普通权限」徽章提权重启后再操作', 'err'); return; }
+  try {
+    var valPath = p.hive + '\\' + p.path + '\\' + name;
+    var val = sh.RegRead(valPath);
+    var bn = suBkValName(name);
+    sh.RegWrite('HKCU\\SOFTWARE\\SYSMON_SU\\' + bn + '__v', val, 'REG_SZ');
+    sh.RegWrite('HKCU\\SOFTWARE\\SYSMON_SU\\' + bn + '__p', valPath, 'REG_SZ');
+    sh.RegDelete(valPath);
+    toast('已禁用自启动', name + '（已备份，可随时启用恢复）', 'ok');
+    log('已禁用启动项: ' + name, 'ok');
+    setTimeout(loadSu, 60);
+  } catch(e){
+    toast('禁用失败', name + ': ' + e.message, 'err');
+  }
+}
+function suRestore(name){
+  try {
+    var bn = suBkValName(name);
+    var val = sh.RegRead('HKCU\\SOFTWARE\\SYSMON_SU\\' + bn + '__v');
+    var path = sh.RegRead('HKCU\\SOFTWARE\\SYSMON_SU\\' + bn + '__p');
+    sh.RegWrite(path, val, 'REG_SZ');
+    sh.RegDelete('HKCU\\SOFTWARE\\SYSMON_SU\\' + bn + '__v');
+    sh.RegDelete('HKCU\\SOFTWARE\\SYSMON_SU\\' + bn + '__p');
+    toast('已恢复自启动', name, 'ok');
+    log('已恢复启动项: ' + name, 'ok');
+    setTimeout(loadSu, 60);
+  } catch(e){
+    toast('恢复失败', name + ': ' + e.message, 'err');
+  }
 }
 
 /* ================= 管理员权限 ================= */
